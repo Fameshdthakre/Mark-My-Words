@@ -1,0 +1,6 @@
+{
+  "name": "AI Image Alt Text Generator",
+  "description": "A web application that uses Gemini API to generate alt text for images provided via URLs. It processes images in bulk and displays the results.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
