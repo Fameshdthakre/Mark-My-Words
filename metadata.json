@@ -1,6 +1,0 @@
-{
-  "name": "Dhan AI Trading Agent",
-  "description": "An AI-powered application to analyze Indian stock data, providing insights and trade signals using Gemini API, with backend integration for Dhan.",
-  "requestFramePermissions": [],
-  "prompt": ""
-}
