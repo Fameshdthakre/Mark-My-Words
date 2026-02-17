@@ -26,6 +26,7 @@ function applyHighlights() {
         // 1. Check Global Enable
         if (config.settings && config.settings.globalEnabled === false) {
             removeAllHighlights();
+            updateBadge(0);
             return;
         }
 
@@ -37,6 +38,7 @@ function applyHighlights() {
             );
             if (isExcluded) {
                 removeAllHighlights();
+                updateBadge(0);
                 return;
             }
         }
@@ -54,7 +56,10 @@ function applyHighlights() {
         removeAllHighlights();
 
         const lists = config.lists.filter(l => l.enabled);
-        if (lists.length === 0) return;
+        if (lists.length === 0) {
+            updateBadge(0);
+            return;
+        }
 
         const walker = document.createTreeWalker(
             document.body,
@@ -139,6 +144,9 @@ function applyHighlights() {
                 parent.removeChild(node);
             }
         });
+
+        // Update Badge Count
+        updateBadge(document.querySelectorAll('mark.highlight-pro-ext').length);
     });
 }
 
@@ -150,6 +158,13 @@ function removeAllHighlights() {
             parent.normalize();
         }
     });
+}
+
+function updateBadge(count) {
+    chrome.runtime.sendMessage({
+        action: "update_badge",
+        count: count
+    }, () => { if(chrome.runtime.lastError){ /* ignore */ } });
 }
 
 // Listen for updates
