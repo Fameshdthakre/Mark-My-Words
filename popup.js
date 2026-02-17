@@ -10,7 +10,6 @@ const ICONS = {
     eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
 };
 
-// Use the new "Electric Indigo" palette
 const PRESETS = [
     { bg: '#6610f2', text: '#ffffff', name: 'Electric Purple' },
     { bg: '#3b82f6', text: '#ffffff', name: 'Blue' },
@@ -31,17 +30,15 @@ const DEFAULT_LIST = {
     options: { caseSensitive: false, wholeWord: true, isRegex: false }
 };
 
-// --- State ---
 let state = {
     lists: [],
-    activeView: 'dashboard', // 'dashboard' | 'editor'
+    activeView: 'dashboard',
     editingListId: null
 };
 
 // --- App Logic ---
 
 function init() {
-    // Load from Storage
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         chrome.storage.local.get(['highlighter_lists_v3'], (result) => {
             state.lists = result.highlighter_lists_v3 || [DEFAULT_LIST];
@@ -57,8 +54,16 @@ function init() {
 function save() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         chrome.storage.local.set({ 'highlighter_lists_v3': state.lists }, () => {
+            // Error handling for "receiving end does not exist"
             chrome.tabs?.query({active: true, currentWindow: true}, function(tabs) {
-                if(tabs[0]?.id) chrome.tabs.sendMessage(tabs[0].id, {action: "refresh_highlights"});
+                if (chrome.runtime.lastError) return; // Ignore if query fails
+                if (tabs[0]?.id) {
+                    chrome.tabs.sendMessage(tabs[0].id, {action: "refresh_highlights"}, (response) => {
+                        // Swallow error if content script isn't there
+                        const err = chrome.runtime.lastError;
+                        if(err) { /* console.log("Content script not ready in this tab"); */ }
+                    });
+                }
             });
         });
     }
@@ -68,20 +73,9 @@ function save() {
 
 function render() {
     const app = document.getElementById('app');
-    app.innerHTML = `
-        ${renderHeader()}
-        <main style="flex: 1; overflow-y: auto; padding-bottom: 2rem;">
-            ${state.activeView === 'dashboard' ? renderDashboard() : renderEditor()}
-        </main>
-        ${renderPreview()}
-    `;
 
-    // Re-attach event listeners after render
-    attachEvents();
-}
-
-function renderHeader() {
-    return `
+    // Header
+    const headerHtml = `
     <header>
         <div class="flex items-center">
             <div class="logo-box">${ICONS.zap}</div>
@@ -94,14 +88,38 @@ function renderHeader() {
         </div>
         <div>
             ${state.activeView === 'dashboard'
-                ? `<button class="btn btn-icon" title="Settings">${ICONS.settings}</button>`
+                ? `<button class="btn btn-icon" id="btn-settings" title="Settings">${ICONS.settings}</button>`
                 : `<button id="nav-back" class="btn btn-secondary" style="font-size: 0.75rem;">${ICONS.chevronLeft} Back</button>`
             }
         </div>
     </header>`;
+
+    // Main Content
+    let mainHtml = '';
+    if (state.activeView === 'dashboard') {
+        mainHtml = renderDashboardHtml();
+    } else {
+        mainHtml = renderEditorHtml();
+    }
+
+    // Preview
+    const previewHtml = renderPreviewHtml();
+
+    app.innerHTML = `
+        ${headerHtml}
+        <main style="flex: 1; overflow-y: auto; padding-bottom: 2rem;">
+            ${mainHtml}
+        </main>
+        ${previewHtml}
+    `;
+
+    // Post-render Event Attachment (CSP Safe)
+    attachEvents();
 }
 
-function renderDashboard() {
+// --- HTML Generators (Strings Only) ---
+
+function renderDashboardHtml() {
     if (state.lists.length === 0) {
         return `
         <div class="dashboard-header">
@@ -120,12 +138,12 @@ function renderDashboard() {
     }
 
     const listsHtml = state.lists.map(list => `
-        <div class="list-item" onclick="editList('${list.id}')">
-            <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" onclick="event.stopPropagation(); toggleList('${list.id}')">
+        <div class="list-item" data-id="${list.id}">
+            <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" data-action="toggle" data-id="${list.id}">
                 <div class="toggle-dot"></div>
             </div>
 
-            <div style="flex: 1; min-width: 0; padding: 0 0.5rem;">
+            <div class="list-content" style="flex: 1; min-width: 0; padding: 0 0.5rem;" data-action="edit" data-id="${list.id}">
                 <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">${list.name}</div>
                 <div class="flex items-center gap-2" style="margin-top: 0.35rem;">
                     <div style="width: 6px; height: 6px; border-radius: 50%; background-color: ${list.styles.backgroundColor}; box-shadow: 0 0 6px ${list.styles.backgroundColor};"></div>
@@ -133,7 +151,7 @@ function renderDashboard() {
                 </div>
             </div>
 
-            <button class="btn btn-icon" onclick="event.stopPropagation(); deleteList('${list.id}')" style="opacity: 0.6;">
+            <button class="btn btn-icon" data-action="delete" data-id="${list.id}" style="opacity: 0.6;">
                 ${ICONS.trash}
             </button>
         </div>
@@ -150,7 +168,7 @@ function renderDashboard() {
     <div class="list-container">${listsHtml}</div>`;
 }
 
-function renderEditor() {
+function renderEditorHtml() {
     const list = state.lists.find(l => l.id === state.editingListId);
     if (!list) return '';
 
@@ -158,17 +176,17 @@ function renderEditor() {
     <div class="editor-view">
         <div class="input-group">
             <label class="label">Rule Name</label>
-            <input type="text" class="title-input" value="${list.name}" placeholder="Enter rule name..." onchange="updateListProperty('name', this.value)">
+            <input type="text" id="input-name" class="title-input" value="${list.name}" placeholder="Enter rule name...">
         </div>
 
         <div class="options-grid">
-            <div class="option-card ${list.options.caseSensitive ? 'active' : ''}" onclick="toggleListOption('caseSensitive')">
+            <div class="option-card ${list.options.caseSensitive ? 'active' : ''}" data-action="toggleOption" data-key="caseSensitive">
                 <span style="font-size: 1.25rem; margin-bottom: 2px;">Aa</span> Match Case
             </div>
-            <div class="option-card ${list.options.wholeWord ? 'active' : ''}" onclick="toggleListOption('wholeWord')">
+            <div class="option-card ${list.options.wholeWord ? 'active' : ''}" data-action="toggleOption" data-key="wholeWord">
                 <span style="font-size: 1.25rem; margin-bottom: 2px;">Abc</span> Whole Word
             </div>
-            <div class="option-card ${list.options.isRegex ? 'active' : ''}" onclick="toggleListOption('isRegex')">
+            <div class="option-card ${list.options.isRegex ? 'active' : ''}" data-action="toggleOption" data-key="isRegex">
                 <span style="font-size: 1.25rem; margin-bottom: 2px;">.*</span> Regex
             </div>
         </div>
@@ -181,9 +199,9 @@ function renderEditor() {
                     const style = isActive
                         ? `background-color: ${p.bg}; color: ${p.text}; box-shadow: 0 0 0 2px white, 0 0 10px ${p.bg}; transform: scale(1.1);`
                         : `background-color: ${p.bg}; color: ${p.text};`;
-                    return `<button class="color-btn" style="${style}" onclick="updateListStyle('${p.bg}', '${p.text}')">Aa</button>`;
+                    return `<button class="color-btn" style="${style}" data-action="setColor" data-bg="${p.bg}" data-text="${p.text}">Aa</button>`;
                 }).join('')}
-                <input type="color" value="${list.styles.backgroundColor}" onchange="updateListStyle(this.value, '#ffffff')" style="visibility: hidden; width: 0; position: absolute;">
+                <input type="color" id="native-color-picker" value="${list.styles.backgroundColor}" style="visibility: hidden; width: 0; position: absolute;">
             </div>
         </div>
 
@@ -198,7 +216,7 @@ function renderEditor() {
             <div class="tag-container">
                 ${list.words.map(w => `
                     <span class="tag" style="background-color: ${list.styles.backgroundColor}20; color: white; border: 1px solid ${list.styles.backgroundColor}60;">
-                        ${w} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" onclick="removeWord('${w}')">${ICONS.x}</span>
+                        ${w} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" data-action="removeWord" data-word="${w}">${ICONS.x}</span>
                     </span>
                 `).join('')}
                 ${list.words.length === 0 ? '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No keywords added yet.</span>' : ''}
@@ -207,14 +225,11 @@ function renderEditor() {
     </div>`;
 }
 
-function renderPreview() {
+function renderPreviewHtml() {
     const list = state.activeView === 'editor' ? state.lists.find(l => l.id === state.editingListId) : null;
     let sampleText = "Preview: Highlight Pro makes it easy to style your web.";
 
-    // If we are editing, show the style in the preview if possible
-    let style = "";
     if (list) {
-         // Create a simple styled span
          const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Highlight Pro</span>`;
          sampleText = `Preview: ${hl} makes it easy to style your web.`;
     }
@@ -228,37 +243,105 @@ function renderPreview() {
     </div>`;
 }
 
-// --- Actions ---
+// --- Event Handlers (CSP Safe) ---
 
 function attachEvents() {
-    // Navigation
+    // 1. Navigation & Global
     const backBtn = document.getElementById('nav-back');
-    if (backBtn) backBtn.onclick = () => { state.activeView = 'dashboard'; render(); };
+    if (backBtn) backBtn.addEventListener('click', () => { state.activeView = 'dashboard'; render(); });
 
     const createBtn = document.getElementById('btn-create');
-    if (createBtn) createBtn.onclick = createList;
+    if (createBtn) createBtn.addEventListener('click', createList);
 
-    // Form
-    const form = document.getElementById('add-word-form');
-    if (form) {
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            const input = document.getElementById('new-word-input');
-            const val = input.value.trim();
-            if (val) {
-                const list = state.lists.find(l => l.id === state.editingListId);
-                if (list) {
+    // 2. Dashboard List Items (Event Delegation)
+    const listContainer = document.querySelector('.list-container');
+    if (listContainer) {
+        listContainer.addEventListener('click', (e) => {
+            // Traverse up to find the actionable element
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const id = target.dataset.id;
+
+            if (action === 'edit') {
+                editList(id);
+            } else if (action === 'toggle') {
+                e.stopPropagation(); // Prevent triggering edit
+                toggleList(id);
+            } else if (action === 'delete') {
+                e.stopPropagation();
+                deleteList(id);
+            }
+        });
+    }
+
+    // 3. Editor Interactions
+    if (state.activeView === 'editor') {
+        const list = state.lists.find(l => l.id === state.editingListId);
+        if (!list) return;
+
+        // Name Input
+        const nameInput = document.getElementById('input-name');
+        if (nameInput) {
+            nameInput.addEventListener('input', (e) => updateListProperty('name', e.target.value));
+        }
+
+        // Options (Match Case, etc)
+        document.querySelectorAll('.option-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const key = card.dataset.key;
+                toggleListOption(key);
+            });
+        });
+
+        // Color Picker Buttons
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const bg = btn.dataset.bg;
+                const text = btn.dataset.text;
+                updateListStyle(bg, text);
+            });
+        });
+
+        // Native Color Picker
+        const nativePicker = document.getElementById('native-color-picker');
+        if (nativePicker) {
+            nativePicker.addEventListener('change', (e) => {
+                updateListStyle(e.target.value, '#ffffff');
+            });
+        }
+
+        // Remove Word (Tag clicks)
+        document.querySelectorAll('[data-action="removeWord"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent bubbling if needed
+                const w = btn.dataset.word;
+                removeWord(w);
+            });
+        });
+
+        // Add Word Form
+        const form = document.getElementById('add-word-form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('new-word-input');
+                const val = input.value.trim();
+                if (val) {
                     if (!list.words.includes(val)) {
                         list.words.push(val);
                         save();
                     } else {
-                        input.value = ''; // Clear duplicate input
+                        input.value = '';
                     }
                 }
-            }
-        };
+            });
+        }
     }
 }
+
+// --- Action Functions ---
 
 function createList() {
     const newList = {
@@ -275,14 +358,56 @@ function createList() {
     save();
 }
 
-// Exposed globally for HTML onclick attributes
-window.editList = (id) => { state.editingListId = id; state.activeView = 'editor'; render(); };
-window.deleteList = (id) => { state.lists = state.lists.filter(l => l.id !== id); save(); };
-window.toggleList = (id) => { const l = state.lists.find(x => x.id === id); if(l) { l.enabled = !l.enabled; save(); } };
-window.updateListProperty = (key, val) => { const l = state.lists.find(x => x.id === state.editingListId); if(l) { l[key] = val; save(); } };
-window.updateListStyle = (bg, txt) => { const l = state.lists.find(x => x.id === state.editingListId); if(l) { l.styles = { backgroundColor: bg, color: txt }; save(); } };
-window.toggleListOption = (key) => { const l = state.lists.find(x => x.id === state.editingListId); if(l) { l.options[key] = !l.options[key]; save(); } };
-window.removeWord = (w) => { const l = state.lists.find(x => x.id === state.editingListId); if(l) { l.words = l.words.filter(word => word !== w); save(); } };
+function editList(id) {
+    state.editingListId = id;
+    state.activeView = 'editor';
+    render();
+}
+
+function deleteList(id) {
+    state.lists = state.lists.filter(l => l.id !== id);
+    save();
+}
+
+function toggleList(id) {
+    const l = state.lists.find(x => x.id === id);
+    if(l) {
+        l.enabled = !l.enabled;
+        save();
+    }
+}
+
+function updateListProperty(key, val) {
+    const l = state.lists.find(x => x.id === state.editingListId);
+    if(l) {
+        l[key] = val;
+        save();
+    }
+}
+
+function updateListStyle(bg, txt) {
+    const l = state.lists.find(x => x.id === state.editingListId);
+    if(l) {
+        l.styles = { backgroundColor: bg, color: txt };
+        save();
+    }
+}
+
+function toggleListOption(key) {
+    const l = state.lists.find(x => x.id === state.editingListId);
+    if(l) {
+        l.options[key] = !l.options[key];
+        save();
+    }
+}
+
+function removeWord(w) {
+    const l = state.lists.find(x => x.id === state.editingListId);
+    if(l) {
+        l.words = l.words.filter(word => word !== w);
+        save();
+    }
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
