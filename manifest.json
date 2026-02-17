@@ -1,16 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Highlight Pro AI",
+  "name": "Highlight Pro",
   "version": "1.0.0",
-  "description": "Smart text highlighting with Gemini AI.",
+  "description": "Smart, modern text highlighting with customizable styles.",
   "permissions": [
     "storage",
     "activeTab",
     "scripting"
   ],
-  "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
-  ],
+  "host_permissions": [],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Highlight Pro"

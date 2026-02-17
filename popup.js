@@ -1,35 +1,32 @@
-// --- Configuration ---
-const API_KEY = ""; // Runtime provided
-
 // --- Icons (SVG Strings) ---
 const ICONS = {
-    zap: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
-    plus: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
-    trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
-    edit: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
-    x: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
-    settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
-    sparkles: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>`,
-    chevronLeft: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
-    eye: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+    zap: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
+    plus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+    trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+    edit: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
+    x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+    settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+    chevronLeft: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
+    eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
 };
 
+// Use the new "Electric Indigo" palette
 const PRESETS = [
-    { bg: '#4f46e5', text: '#ffffff', name: 'Indigo' },
+    { bg: '#6610f2', text: '#ffffff', name: 'Electric Purple' },
+    { bg: '#3b82f6', text: '#ffffff', name: 'Blue' },
+    { bg: '#06b6d4', text: '#ffffff', name: 'Cyan' },
     { bg: '#10b981', text: '#ffffff', name: 'Emerald' },
     { bg: '#f59e0b', text: '#ffffff', name: 'Amber' },
     { bg: '#ef4444', text: '#ffffff', name: 'Rose' },
-    { bg: '#8b5cf6', text: '#ffffff', name: 'Violet' },
-    { bg: '#ec4899', text: '#ffffff', name: 'Pink' },
-    { bg: '#06b6d4', text: '#ffffff', name: 'Cyan' },
-    { bg: '#ffffff', text: '#000000', name: 'Pure White' },
+    { bg: '#d946ef', text: '#ffffff', name: 'Fuchsia' },
+    { bg: '#ffffff', text: '#000000', name: 'White' },
 ];
 
 const DEFAULT_LIST = {
     id: 'default-1',
     name: 'Important Terms',
     words: ['React', 'Extension', 'highlight', 'code'],
-    styles: { backgroundColor: '#4f46e5', color: '#ffffff' },
+    styles: { backgroundColor: '#6610f2', color: '#ffffff' },
     enabled: true,
     options: { caseSensitive: false, wholeWord: true, isRegex: false }
 };
@@ -38,29 +35,8 @@ const DEFAULT_LIST = {
 let state = {
     lists: [],
     activeView: 'dashboard', // 'dashboard' | 'editor'
-    editingListId: null,
-    isExtracting: false
+    editingListId: null
 };
-
-// --- Gemini API ---
-async function callGemini(prompt) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                systemInstruction: { parts: [{ text: "You are a helpful assistant. Return only the requested comma-separated list." }] }
-            })
-        });
-        const result = await response.json();
-        return result.candidates?.[0]?.content?.parts?.[0]?.text;
-    } catch (error) {
-        console.error("Gemini Error:", error);
-        return null;
-    }
-}
 
 // --- App Logic ---
 
@@ -94,12 +70,12 @@ function render() {
     const app = document.getElementById('app');
     app.innerHTML = `
         ${renderHeader()}
-        <main style="flex: 1; overflow-y: auto;">
+        <main style="flex: 1; overflow-y: auto; padding-bottom: 2rem;">
             ${state.activeView === 'dashboard' ? renderDashboard() : renderEditor()}
         </main>
         ${renderPreview()}
     `;
-    
+
     // Re-attach event listeners after render
     attachEvents();
 }
@@ -117,9 +93,9 @@ function renderHeader() {
             </div>
         </div>
         <div>
-            ${state.activeView === 'dashboard' 
-                ? `<button class="btn btn-icon">${ICONS.settings}</button>` 
-                : `<button id="nav-back" class="btn btn-secondary" style="padding: 0.25rem 0.75rem;">${ICONS.chevronLeft} Back</button>`
+            ${state.activeView === 'dashboard'
+                ? `<button class="btn btn-icon" title="Settings">${ICONS.settings}</button>`
+                : `<button id="nav-back" class="btn btn-secondary" style="font-size: 0.75rem;">${ICONS.chevronLeft} Back</button>`
             }
         </div>
     </header>`;
@@ -130,12 +106,17 @@ function renderDashboard() {
         return `
         <div class="dashboard-header">
             <div>
-                <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Library</h2>
-                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">Manage your rules</p>
+                <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0; letter-spacing: -0.01em;">Your Rules</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">0 active rules</p>
             </div>
-            <button id="btn-create" class="btn btn-primary">${ICONS.plus} New Rule</button>
+            <button id="btn-create" class="btn btn-primary">${ICONS.plus} New</button>
         </div>
-        <div style="padding: 2rem; text-align: center; color: var(--text-muted);">Library is empty</div>`;
+        <div style="padding: 4rem 2rem; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--bg-glass); display: flex; items-center: center; justify-content: center; color: var(--text-muted);">
+               ${ICONS.zap}
+            </div>
+            <span>No rules yet. Create one to start highlighting!</span>
+        </div>`;
     }
 
     const listsHtml = state.lists.map(list => `
@@ -143,31 +124,28 @@ function renderDashboard() {
             <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" onclick="event.stopPropagation(); toggleList('${list.id}')">
                 <div class="toggle-dot"></div>
             </div>
-            <div style="flex: 1; overflow: hidden; cursor: pointer;">
-                <div style="font-weight: 500; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${list.name}</div>
-                <div class="flex items-center gap-2" style="margin-top: 0.25rem;">
-                    <span style="font-size: 0.625rem; color: var(--text-muted); font-weight: 700;">${list.words.length} ITEMS</span>
-                    <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${list.styles.backgroundColor};"></div>
+
+            <div style="flex: 1; min-width: 0; padding: 0 0.5rem;">
+                <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">${list.name}</div>
+                <div class="flex items-center gap-2" style="margin-top: 0.35rem;">
+                    <div style="width: 6px; height: 6px; border-radius: 50%; background-color: ${list.styles.backgroundColor}; box-shadow: 0 0 6px ${list.styles.backgroundColor};"></div>
+                    <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">${list.words.length} KEYWORDS</span>
                 </div>
             </div>
-            <div class="flex gap-2">
-                <button class="btn btn-icon" onclick="event.stopPropagation(); deleteList('${list.id}')">${ICONS.trash}</button>
-            </div>
+
+            <button class="btn btn-icon" onclick="event.stopPropagation(); deleteList('${list.id}')" style="opacity: 0.6;">
+                ${ICONS.trash}
+            </button>
         </div>
     `).join('');
 
     return `
     <div class="dashboard-header">
         <div>
-            <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Library</h2>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">Manage rules</p>
+            <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0; letter-spacing: -0.01em;">Your Rules</h2>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">${state.lists.length} active rules</p>
         </div>
-        <div class="flex flex-col gap-2">
-            <button id="btn-create" class="btn btn-primary">${ICONS.plus} New Rule</button>
-            <button id="btn-ai" class="btn btn-secondary" ${state.isExtracting ? 'disabled' : ''}>
-                ${state.isExtracting ? '...' : ICONS.sparkles} AI Extract
-            </button>
-        </div>
+        <button id="btn-create" class="btn btn-primary">${ICONS.plus} New</button>
     </div>
     <div class="list-container">${listsHtml}</div>`;
 }
@@ -179,75 +157,74 @@ function renderEditor() {
     return `
     <div class="editor-view">
         <div class="input-group">
-            <label class="label">List Title</label>
-            <input type="text" class="title-input" value="${list.name}" onchange="updateListProperty('name', this.value)">
+            <label class="label">Rule Name</label>
+            <input type="text" class="title-input" value="${list.name}" placeholder="Enter rule name..." onchange="updateListProperty('name', this.value)">
         </div>
 
         <div class="options-grid">
             <div class="option-card ${list.options.caseSensitive ? 'active' : ''}" onclick="toggleListOption('caseSensitive')">
-                <span>Aa</span> Match Case
+                <span style="font-size: 1.25rem; margin-bottom: 2px;">Aa</span> Match Case
             </div>
             <div class="option-card ${list.options.wholeWord ? 'active' : ''}" onclick="toggleListOption('wholeWord')">
-                <span>Abc</span> Whole Word
+                <span style="font-size: 1.25rem; margin-bottom: 2px;">Abc</span> Whole Word
             </div>
             <div class="option-card ${list.options.isRegex ? 'active' : ''}" onclick="toggleListOption('isRegex')">
-                <span>.*</span> Regex
+                <span style="font-size: 1.25rem; margin-bottom: 2px;">.*</span> Regex
             </div>
         </div>
 
         <div class="input-group">
-            <label class="label">Color Style</label>
+            <label class="label">Highlight Style</label>
             <div class="color-picker-row">
-                ${PRESETS.map(p => `
-                    <button class="color-btn" style="background-color: ${p.bg}; color: ${p.text}; border: ${list.styles.backgroundColor === p.bg ? '2px solid white' : 'none'}" 
-                    onclick="updateListStyle('${p.bg}', '${p.text}')">Aa</button>
-                `).join('')}
-                <input type="color" value="${list.styles.backgroundColor}" onchange="updateListStyle(this.value, '#ffffff')" style="visibility: hidden; width: 0;">
+                ${PRESETS.map(p => {
+                    const isActive = list.styles.backgroundColor === p.bg;
+                    const style = isActive
+                        ? `background-color: ${p.bg}; color: ${p.text}; box-shadow: 0 0 0 2px white, 0 0 10px ${p.bg}; transform: scale(1.1);`
+                        : `background-color: ${p.bg}; color: ${p.text};`;
+                    return `<button class="color-btn" style="${style}" onclick="updateListStyle('${p.bg}', '${p.text}')">Aa</button>`;
+                }).join('')}
+                <input type="color" value="${list.styles.backgroundColor}" onchange="updateListStyle(this.value, '#ffffff')" style="visibility: hidden; width: 0; position: absolute;">
             </div>
         </div>
 
-        <div class="input-group">
+        <div class="input-group" style="margin-bottom: 0;">
              <div class="flex justify-between items-center mb-2">
-                <label class="label" style="margin:0">Patterns</label>
-                <button id="btn-smart-fill" class="btn-icon" style="font-size: 10px; color: var(--primary); font-weight: bold; width: auto;">
-                    ${state.isExtracting ? '...' : '✨ Smart Fill'}
-                </button>
+                <label class="label" style="margin:0">Keywords</label>
              </div>
             <form id="add-word-form" class="word-input-container">
-                <input type="text" id="new-word-input" class="word-input" placeholder="Add word or regex...">
-                <button type="submit" class="btn btn-secondary">Add</button>
+                <input type="text" id="new-word-input" class="word-input" placeholder="Type a word and press Enter..." autocomplete="off">
+                <button type="submit" class="btn btn-secondary" style="border-radius: 0.75rem;">${ICONS.plus}</button>
             </form>
             <div class="tag-container">
                 ${list.words.map(w => `
-                    <span class="tag" style="color: ${list.styles.backgroundColor}; border-color: ${list.styles.backgroundColor}40; background-color: ${list.styles.backgroundColor}20;">
-                        ${w} <span style="cursor: pointer; margin-left: 4px;" onclick="removeWord('${w}')">${ICONS.x}</span>
+                    <span class="tag" style="background-color: ${list.styles.backgroundColor}20; color: white; border: 1px solid ${list.styles.backgroundColor}60;">
+                        ${w} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" onclick="removeWord('${w}')">${ICONS.x}</span>
                     </span>
                 `).join('')}
+                ${list.words.length === 0 ? '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No keywords added yet.</span>' : ''}
             </div>
         </div>
     </div>`;
 }
 
 function renderPreview() {
-    const sampleText = `Hello! Highlight Pro AI is now active.
-Discover ✨ Smart Suggestions in the editor.
-Native JS makes this fast and CSP compliant!`;
-    
-    // Simulate highlighting logic for preview
-    let html = sampleText;
-    // Note: A full highlighter implementation for preview text in HTML is complex to do via Regex replace alone without breaking HTML tags,
-    // but for this simple plain-text preview, we can iterate.
-    // Ideally, we reuse the logic from content.js, but simplified here for the popup UI.
-    
-    // Simple render (no highlighting in preview for brevity in Vanilla version to avoid complex DOM node logic duplication)
-    // You can copy the logic from content.js if you want the preview to light up real-time.
-    
+    const list = state.activeView === 'editor' ? state.lists.find(l => l.id === state.editingListId) : null;
+    let sampleText = "Preview: Highlight Pro makes it easy to style your web.";
+
+    // If we are editing, show the style in the preview if possible
+    let style = "";
+    if (list) {
+         // Create a simple styled span
+         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Highlight Pro</span>`;
+         sampleText = `Preview: ${hl} makes it easy to style your web.`;
+    }
+
     return `
     <div class="preview-area">
-        <div class="flex items-center gap-2" style="font-size: 0.625rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem;">
-            ${ICONS.eye} Preview
+        <div class="flex items-center gap-2" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; letter-spacing: 0.05em;">
+            ${ICONS.eye} Live Preview
         </div>
-        <div class="preview-box">${html}</div>
+        <div class="preview-box">${sampleText}</div>
     </div>`;
 }
 
@@ -261,12 +238,6 @@ function attachEvents() {
     const createBtn = document.getElementById('btn-create');
     if (createBtn) createBtn.onclick = createList;
 
-    const aiBtn = document.getElementById('btn-ai');
-    if (aiBtn) aiBtn.onclick = handleAiExtract;
-
-    const smartFillBtn = document.getElementById('btn-smart-fill');
-    if (smartFillBtn) smartFillBtn.onclick = handleSmartFill;
-
     // Form
     const form = document.getElementById('add-word-form');
     if (form) {
@@ -277,9 +248,12 @@ function attachEvents() {
             if (val) {
                 const list = state.lists.find(l => l.id === state.editingListId);
                 if (list) {
-                    list.words.push(val);
-                    input.value = '';
-                    save();
+                    if (!list.words.includes(val)) {
+                        list.words.push(val);
+                        save();
+                    } else {
+                        input.value = ''; // Clear duplicate input
+                    }
                 }
             }
         };
@@ -289,9 +263,9 @@ function attachEvents() {
 function createList() {
     const newList = {
         id: crypto.randomUUID(),
-        name: 'New List',
+        name: 'New Rule',
         words: [],
-        styles: { backgroundColor: '#4f46e5', color: '#ffffff' },
+        styles: { backgroundColor: '#6610f2', color: '#ffffff' },
         enabled: true,
         options: { caseSensitive: false, wholeWord: true, isRegex: false }
     };
@@ -299,48 +273,6 @@ function createList() {
     state.editingListId = newList.id;
     state.activeView = 'editor';
     save();
-}
-
-function handleAiExtract() {
-    state.isExtracting = true;
-    render();
-    callGemini("Analyze common web patterns and suggest 5 high-value technical keywords. Return ONLY a comma-separated list.").then(text => {
-        state.isExtracting = false;
-        if (text) {
-            const words = text.split(',').map(w => w.trim()).filter(w => w);
-            state.lists.push({
-                id: crypto.randomUUID(),
-                name: '✨ AI Suggested',
-                words: words,
-                styles: { backgroundColor: '#8b5cf6', color: '#ffffff' },
-                enabled: true,
-                options: { caseSensitive: false, wholeWord: true, isRegex: false }
-            });
-            save();
-        } else {
-            render();
-        }
-    });
-}
-
-function handleSmartFill() {
-    const list = state.lists.find(l => l.id === state.editingListId);
-    if (!list) return;
-    
-    state.isExtracting = true;
-    render();
-    const prompt = `Based on the list title "${list.name}" and existing words [${list.words.join(', ')}], suggest 5 more relevant words. Return ONLY comma-separated list.`;
-    
-    callGemini(prompt).then(text => {
-        state.isExtracting = false;
-        if (text) {
-            const words = text.split(',').map(w => w.trim()).filter(w => w);
-            list.words = [...new Set([...list.words, ...words])];
-            save();
-        } else {
-            render();
-        }
-    });
 }
 
 // Exposed globally for HTML onclick attributes

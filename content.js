@@ -20,12 +20,14 @@ function debounce(func, wait) {
 function applyHighlights() {
     chrome.storage.local.get(['highlighter_lists_v3'], (result) => {
         if (!result.highlighter_lists_v3) return;
-        
+
         // Remove existing highlights to prevent duplication/mess
         document.querySelectorAll('mark.highlight-pro-ext').forEach(mark => {
             const parent = mark.parentNode;
-            parent.replaceChild(document.createTextNode(mark.textContent), mark);
-            parent.normalize(); // Merge text nodes
+            if (parent) {
+                parent.replaceChild(document.createTextNode(mark.textContent), mark);
+                parent.normalize(); // Merge text nodes
+            }
         });
 
         const lists = result.highlighter_lists_v3.filter(l => l.enabled);
@@ -37,9 +39,12 @@ function applyHighlights() {
             {
                 acceptNode: (node) => {
                     // Skip script, style, and already highlighted nodes
-                    if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'].includes(node.parentNode.tagName)) {
+                    if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME'].includes(node.parentNode.tagName)) {
                         return NodeFilter.FILTER_REJECT;
                     }
+                    // Skip if parent is editable
+                    if (node.parentNode.isContentEditable) return NodeFilter.FILTER_REJECT;
+
                     return NodeFilter.FILTER_ACCEPT;
                 }
             }
@@ -51,22 +56,27 @@ function applyHighlights() {
             textNodes.push(currentNode);
         }
 
-        // Apply highlighting (Simplified version of the React Preview logic)
-        // Note: Direct DOM manipulation is safer than innerHTML replacement for arbitrary pages
+        // Apply highlighting
         textNodes.forEach(node => {
+            if (!node.nodeValue.trim()) return;
+
             let text = node.nodeValue;
             let rangesToHighlight = [];
 
             lists.forEach(list => {
                 let patternSource;
-                
+
                 try {
                     if (list.options.isRegex) {
-                        const valid = list.words.filter(w => { try { new RegExp(w); return true; } catch { return false; } });
+                        // Filter valid regexes
+                        const valid = list.words.filter(w => {
+                            try { new RegExp(w); return true; } catch { return false; }
+                        });
                         if (valid.length === 0) return;
                         patternSource = `(${valid.join('|')})`;
                     } else {
                         if (list.words.length === 0) return;
+                        // Escape special characters
                         const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
                         patternSource = list.options.wholeWord ? `\\b(${escaped})\\b` : `(${escaped})`;
                     }
@@ -87,18 +97,25 @@ function applyHighlights() {
 
             // If we found matches in this text node
             if (rangesToHighlight.length > 0) {
-                // Sort ranges and process
-                // Note: Complex overlap handling is omitted for brevity, taking the first valid match strategy
-                // For a production extension, use a library like 'mark.js'
-                
-                const range = rangesToHighlight[0]; // Simple implementation: take first match
+                // Sort ranges to handle overlaps (simple strategy: first come first served or largest first)
+                // We'll just take the first one for simplicity in this version
+                // A production version needs an interval tree or merge strategy
+
+                const range = rangesToHighlight[0];
+
                 const span = document.createElement('mark');
                 span.className = 'highlight-pro-ext';
+
+                // Modern Highlight Styles
                 span.style.backgroundColor = range.style.backgroundColor;
                 span.style.color = range.style.color;
+                span.style.borderRadius = '4px';
+                span.style.padding = '0 3px';
+                span.style.margin = '0 1px';
+                span.style.boxShadow = `0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px ${range.style.backgroundColor}40`; // Subtle depth + border
+                span.style.fontInherit = 'true';
+
                 span.textContent = text.substring(range.start, range.end);
-                span.style.borderRadius = '2px';
-                span.style.padding = '0 2px';
 
                 const afterText = text.substring(range.end);
                 const beforeText = text.substring(0, range.start);
@@ -107,7 +124,7 @@ function applyHighlights() {
                 if (beforeText) parent.insertBefore(document.createTextNode(beforeText), node);
                 parent.insertBefore(span, node);
                 if (afterText) parent.insertBefore(document.createTextNode(afterText), node);
-                
+
                 parent.removeChild(node);
             }
         });
@@ -122,8 +139,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Run on load
-applyHighlights();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyHighlights);
+} else {
+    applyHighlights();
+}
 
 // Optional: Observe DOM changes (for dynamic content like infinite scroll)
-const observer = new MutationObserver(debounce(applyHighlights, 1000));
+const observer = new MutationObserver(debounce(applyHighlights, 1500));
 observer.observe(document.body, { childList: true, subtree: true });
