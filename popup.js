@@ -229,7 +229,7 @@ function renderEditorHtml() {
 
         <div class="input-group">
             <label class="label">Highlight Style</label>
-            <div class="color-picker-row">
+            <div class="color-picker-row" style="flex-wrap: wrap; gap: 0.5rem;">
                 ${PRESETS.map(p => {
                     const isActive = list.styles.backgroundColor === p.bg;
                     const style = isActive
@@ -237,7 +237,21 @@ function renderEditorHtml() {
                         : `background-color: ${p.bg}; color: ${p.text};`;
                     return `<button class="color-btn" style="${style}" data-action="setColor" data-bg="${p.bg}" data-text="${p.text}">Aa</button>`;
                 }).join('')}
-                <input type="color" id="native-color-picker" value="${list.styles.backgroundColor}" style="visibility: hidden; width: 0; position: absolute;">
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label class="label" style="font-size: 0.75rem;">Background</label>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="color" id="custom-bg-picker" value="${list.styles.backgroundColor}" style="width: 100%; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <label class="label" style="font-size: 0.75rem;">Text</label>
+                     <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="color" id="custom-text-picker" value="${list.styles.color}" style="width: 100%; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -389,6 +403,23 @@ function attachEvents() {
                 save();
             });
         });
+
+        const bgPicker = document.getElementById('custom-bg-picker');
+        if (bgPicker) {
+            bgPicker.addEventListener('input', (e) => {
+                list.styles.backgroundColor = e.target.value;
+                // Live update preview if needed, but save triggers render
+                save();
+            });
+        }
+
+        const textPicker = document.getElementById('custom-text-picker');
+        if (textPicker) {
+            textPicker.addEventListener('input', (e) => {
+                list.styles.color = e.target.value;
+                save();
+            });
+        }
 
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', () => {
