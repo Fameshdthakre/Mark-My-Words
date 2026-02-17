@@ -1,3 +1,6 @@
+// --- Configuration ---
+const STORAGE_KEY = 'highlighter_config_v4'; // Changed key for V4
+
 // --- Icons (SVG Strings) ---
 const ICONS = {
     zap: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
@@ -7,7 +10,10 @@ const ICONS = {
     x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
     settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
     chevronLeft: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
-    eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+    eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+    download: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+    upload: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`,
+    check: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
 };
 
 const PRESETS = [
@@ -21,54 +27,80 @@ const PRESETS = [
     { bg: '#ffffff', text: '#000000', name: 'White' },
 ];
 
-const DEFAULT_LIST = {
-    id: 'default-1',
-    name: 'Important Terms',
-    words: ['React', 'Extension', 'highlight', 'code'],
-    styles: { backgroundColor: '#6610f2', color: '#ffffff' },
-    enabled: true,
-    options: { caseSensitive: false, wholeWord: true, isRegex: false }
+const DEFAULT_CONFIG = {
+    lists: [{
+        id: 'default-1',
+        name: 'Important Terms',
+        words: ['React', 'Extension', 'highlight', 'code'],
+        styles: { backgroundColor: '#6610f2', color: '#ffffff' },
+        enabled: true,
+        options: { caseSensitive: false, wholeWord: true, isRegex: false }
+    }],
+    settings: {
+        globalEnabled: true,
+        excludedDomains: [],
+        performanceMode: false
+    }
 };
 
+// --- State ---
 let state = {
-    lists: [],
-    activeView: 'dashboard',
+    config: DEFAULT_CONFIG,
+    activeView: 'dashboard', // 'dashboard' | 'editor' | 'settings'
     editingListId: null
 };
 
 // --- App Logic ---
 
 function init() {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(['highlighter_lists_v3'], (result) => {
-            state.lists = result.highlighter_lists_v3 || [DEFAULT_LIST];
-            render();
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+        // Try to load from SYNC
+        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+            if (result[STORAGE_KEY]) {
+                state.config = result[STORAGE_KEY];
+                render();
+            } else {
+                // If sync is empty, check LOCAL for migration
+                chrome.storage.local.get(['highlighter_lists_v3'], (localResult) => {
+                    if (localResult.highlighter_lists_v3) {
+                        // Migrate V3 lists to V4 config
+                        state.config.lists = localResult.highlighter_lists_v3;
+                        save(); // This will save to sync
+                    } else {
+                        // No data anywhere, use defaults
+                        state.config = DEFAULT_CONFIG;
+                        save();
+                    }
+                });
+            }
         });
     } else {
-        const saved = localStorage.getItem('highlighter_lists_v3');
-        state.lists = saved ? JSON.parse(saved) : [DEFAULT_LIST];
+        // Fallback for non-extension environment
+        const saved = localStorage.getItem(STORAGE_KEY);
+        state.config = saved ? JSON.parse(saved) : DEFAULT_CONFIG;
         render();
     }
 }
 
 function save() {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.set({ 'highlighter_lists_v3': state.lists }, () => {
-            // Error handling for "receiving end does not exist"
-            chrome.tabs?.query({active: true, currentWindow: true}, function(tabs) {
-                if (chrome.runtime.lastError) return; // Ignore if query fails
-                if (tabs[0]?.id) {
-                    chrome.tabs.sendMessage(tabs[0].id, {action: "refresh_highlights"}, (response) => {
-                        // Swallow error if content script isn't there
-                        const err = chrome.runtime.lastError;
-                        if(err) { /* console.log("Content script not ready in this tab"); */ }
-                    });
-                }
-            });
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+        chrome.storage.sync.set({ [STORAGE_KEY]: state.config }, () => {
+            notifyContentScript();
         });
     }
-    localStorage.setItem('highlighter_lists_v3', JSON.stringify(state.lists));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config));
     render();
+}
+
+function notifyContentScript() {
+    chrome.tabs?.query({active: true, currentWindow: true}, function(tabs) {
+        if (chrome.runtime.lastError) return;
+        if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(tabs[0].id, {action: "refresh_highlights"}, () => {
+                if(chrome.runtime.lastError) { /* ignore */ }
+            });
+        }
+    });
 }
 
 function render() {
@@ -82,7 +114,8 @@ function render() {
             <div>
                 <h1 class="app-title">Highlight Pro</h1>
                 <div class="status-badge">
-                    <div class="status-dot"></div> Extension Active
+                    <div class="status-dot" style="background-color: ${state.config.settings.globalEnabled ? 'var(--accent)' : 'var(--text-muted)'}"></div>
+                    ${state.config.settings.globalEnabled ? 'Active' : 'Paused'}
                 </div>
             </div>
         </div>
@@ -98,12 +131,14 @@ function render() {
     let mainHtml = '';
     if (state.activeView === 'dashboard') {
         mainHtml = renderDashboardHtml();
-    } else {
+    } else if (state.activeView === 'editor') {
         mainHtml = renderEditorHtml();
+    } else if (state.activeView === 'settings') {
+        mainHtml = renderSettingsHtml();
     }
 
-    // Preview
-    const previewHtml = renderPreviewHtml();
+    // Preview (Only show on Dashboard/Editor)
+    const previewHtml = state.activeView !== 'settings' ? renderPreviewHtml() : '';
 
     app.innerHTML = `
         ${headerHtml}
@@ -113,18 +148,19 @@ function render() {
         ${previewHtml}
     `;
 
-    // Post-render Event Attachment (CSP Safe)
     attachEvents();
 }
 
-// --- HTML Generators (Strings Only) ---
+// --- HTML Generators ---
 
 function renderDashboardHtml() {
-    if (state.lists.length === 0) {
+    const lists = state.config.lists;
+
+    if (lists.length === 0) {
         return `
         <div class="dashboard-header">
             <div>
-                <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0; letter-spacing: -0.01em;">Your Rules</h2>
+                <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
                 <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">0 active rules</p>
             </div>
             <button id="btn-create" class="btn btn-primary">${ICONS.plus} New</button>
@@ -137,7 +173,7 @@ function renderDashboardHtml() {
         </div>`;
     }
 
-    const listsHtml = state.lists.map(list => `
+    const listsHtml = lists.map(list => `
         <div class="list-item" data-id="${list.id}">
             <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" data-action="toggle" data-id="${list.id}">
                 <div class="toggle-dot"></div>
@@ -160,8 +196,8 @@ function renderDashboardHtml() {
     return `
     <div class="dashboard-header">
         <div>
-            <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0; letter-spacing: -0.01em;">Your Rules</h2>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">${state.lists.length} active rules</p>
+            <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">${lists.length} active rules</p>
         </div>
         <button id="btn-create" class="btn btn-primary">${ICONS.plus} New</button>
     </div>
@@ -169,7 +205,7 @@ function renderDashboardHtml() {
 }
 
 function renderEditorHtml() {
-    const list = state.lists.find(l => l.id === state.editingListId);
+    const list = state.config.lists.find(l => l.id === state.editingListId);
     if (!list) return '';
 
     return `
@@ -225,8 +261,59 @@ function renderEditorHtml() {
     </div>`;
 }
 
+function renderSettingsHtml() {
+    const s = state.config.settings;
+    return `
+    <div class="editor-view">
+        <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">Settings</h2>
+
+        <!-- Global Toggle -->
+        <div class="list-item" style="cursor: default; margin-bottom: 1.5rem;">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 0.95rem; color: white;">Enable Extension</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Turn off highlighting globally</div>
+            </div>
+            <div class="toggle-switch ${s.globalEnabled ? 'on' : 'off'}" id="setting-global-toggle">
+                <div class="toggle-dot"></div>
+            </div>
+        </div>
+
+        <!-- Performance Mode -->
+        <div class="list-item" style="cursor: default; margin-bottom: 1.5rem;">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 0.95rem; color: white;">Performance Mode</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Limit highlights on large pages (>50k chars)</div>
+            </div>
+            <div class="toggle-switch ${s.performanceMode ? 'on' : 'off'}" id="setting-perf-toggle">
+                <div class="toggle-dot"></div>
+            </div>
+        </div>
+
+        <!-- Excluded Domains -->
+        <div class="input-group">
+            <label class="label">Excluded Domains (One per line)</label>
+            <textarea id="setting-excluded" class="word-input" rows="4" style="width: 100%; resize: vertical; font-family: monospace;" placeholder="example.com&#10;gmail.com">${s.excludedDomains.join('\n')}</textarea>
+        </div>
+
+        <!-- Data Management -->
+        <div class="input-group" style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+            <label class="label">Data Management</label>
+            <div class="flex gap-2" style="margin-top: 0.5rem;">
+                <button id="btn-export" class="btn btn-secondary" style="flex: 1;">${ICONS.download} Export Rules</button>
+                <button id="btn-import-trigger" class="btn btn-secondary" style="flex: 1;">${ICONS.upload} Import Rules</button>
+                <input type="file" id="file-import" accept=".json" style="display: none;">
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
+            Highlighter Pro v1.1.0<br>
+            Sync enabled
+        </div>
+    </div>`;
+}
+
 function renderPreviewHtml() {
-    const list = state.activeView === 'editor' ? state.lists.find(l => l.id === state.editingListId) : null;
+    const list = state.activeView === 'editor' ? state.config.lists.find(l => l.id === state.editingListId) : null;
     let sampleText = "Preview: Highlight Pro makes it easy to style your web.";
 
     if (list) {
@@ -243,21 +330,23 @@ function renderPreviewHtml() {
     </div>`;
 }
 
-// --- Event Handlers (CSP Safe) ---
+// --- Event Handlers ---
 
 function attachEvents() {
-    // 1. Navigation & Global
+    // 1. Navigation
     const backBtn = document.getElementById('nav-back');
     if (backBtn) backBtn.addEventListener('click', () => { state.activeView = 'dashboard'; render(); });
 
     const createBtn = document.getElementById('btn-create');
     if (createBtn) createBtn.addEventListener('click', createList);
 
-    // 2. Dashboard List Items (Event Delegation)
+    const settingsBtn = document.getElementById('btn-settings');
+    if (settingsBtn) settingsBtn.addEventListener('click', () => { state.activeView = 'settings'; render(); });
+
+    // 2. Dashboard List Items
     const listContainer = document.querySelector('.list-container');
     if (listContainer) {
         listContainer.addEventListener('click', (e) => {
-            // Traverse up to find the actionable element
             const target = e.target.closest('[data-action]');
             if (!target) return;
 
@@ -265,83 +354,139 @@ function attachEvents() {
             const id = target.dataset.id;
 
             if (action === 'edit') {
-                editList(id);
+                state.editingListId = id;
+                state.activeView = 'editor';
+                render();
             } else if (action === 'toggle') {
-                e.stopPropagation(); // Prevent triggering edit
-                toggleList(id);
+                e.stopPropagation();
+                const l = state.config.lists.find(x => x.id === id);
+                if(l) { l.enabled = !l.enabled; save(); }
             } else if (action === 'delete') {
                 e.stopPropagation();
-                deleteList(id);
+                state.config.lists = state.config.lists.filter(l => l.id !== id);
+                save();
             }
         });
     }
 
     // 3. Editor Interactions
     if (state.activeView === 'editor') {
-        const list = state.lists.find(l => l.id === state.editingListId);
+        const list = state.config.lists.find(l => l.id === state.editingListId);
         if (!list) return;
 
-        // Name Input
         const nameInput = document.getElementById('input-name');
-        if (nameInput) {
-            nameInput.addEventListener('input', (e) => updateListProperty('name', e.target.value));
-        }
+        if (nameInput) nameInput.addEventListener('input', (e) => { list.name = e.target.value; save(); });
 
-        // Options (Match Case, etc)
         document.querySelectorAll('.option-card').forEach(card => {
             card.addEventListener('click', () => {
                 const key = card.dataset.key;
-                toggleListOption(key);
+                list.options[key] = !list.options[key];
+                save();
             });
         });
 
-        // Color Picker Buttons
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const bg = btn.dataset.bg;
-                const text = btn.dataset.text;
-                updateListStyle(bg, text);
+                list.styles = { backgroundColor: btn.dataset.bg, color: btn.dataset.text };
+                save();
             });
         });
 
-        // Native Color Picker
-        const nativePicker = document.getElementById('native-color-picker');
-        if (nativePicker) {
-            nativePicker.addEventListener('change', (e) => {
-                updateListStyle(e.target.value, '#ffffff');
-            });
-        }
-
-        // Remove Word (Tag clicks)
         document.querySelectorAll('[data-action="removeWord"]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.stopPropagation(); // prevent bubbling if needed
-                const w = btn.dataset.word;
-                removeWord(w);
+                e.stopPropagation();
+                list.words = list.words.filter(w => w !== btn.dataset.word);
+                save();
             });
         });
 
-        // Add Word Form
         const form = document.getElementById('add-word-form');
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const input = document.getElementById('new-word-input');
                 const val = input.value.trim();
-                if (val) {
-                    if (!list.words.includes(val)) {
-                        list.words.push(val);
-                        save();
-                    } else {
-                        input.value = '';
-                    }
+                if (val && !list.words.includes(val)) {
+                    list.words.push(val);
+                    save();
+                } else {
+                    input.value = '';
                 }
             });
         }
     }
-}
 
-// --- Action Functions ---
+    // 4. Settings View Interactions
+    if (state.activeView === 'settings') {
+        const globalToggle = document.getElementById('setting-global-toggle');
+        if (globalToggle) {
+            globalToggle.addEventListener('click', () => {
+                state.config.settings.globalEnabled = !state.config.settings.globalEnabled;
+                save();
+            });
+        }
+
+        const perfToggle = document.getElementById('setting-perf-toggle');
+        if (perfToggle) {
+            perfToggle.addEventListener('click', () => {
+                state.config.settings.performanceMode = !state.config.settings.performanceMode;
+                save();
+            });
+        }
+
+        const excludedArea = document.getElementById('setting-excluded');
+        if (excludedArea) {
+            excludedArea.addEventListener('change', (e) => {
+                const lines = e.target.value.split('\n').map(s => s.trim()).filter(s => s);
+                state.config.settings.excludedDomains = lines;
+                save();
+            });
+        }
+
+        const exportBtn = document.getElementById('btn-export');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                const blob = new Blob([JSON.stringify(state.config, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `highlight-pro-backup-${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        const importTrigger = document.getElementById('btn-import-trigger');
+        const fileInput = document.getElementById('file-import');
+        if (importTrigger && fileInput) {
+            importTrigger.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const imported = JSON.parse(evt.target.result);
+                        if (imported.lists && Array.isArray(imported.lists)) {
+                            // Merge strategy: Overwrite config entirely or merge lists?
+                            // Let's replace for simplicity and predictability
+                            state.config = imported;
+                            // Ensure structure integrity
+                            if(!state.config.settings) state.config.settings = DEFAULT_CONFIG.settings;
+                            save();
+                            alert('Rules imported successfully!');
+                        } else {
+                            alert('Invalid JSON format.');
+                        }
+                    } catch (err) {
+                        alert('Error parsing JSON.');
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+    }
+}
 
 function createList() {
     const newList = {
@@ -352,61 +497,10 @@ function createList() {
         enabled: true,
         options: { caseSensitive: false, wholeWord: true, isRegex: false }
     };
-    state.lists.push(newList);
+    state.config.lists.push(newList);
     state.editingListId = newList.id;
     state.activeView = 'editor';
     save();
-}
-
-function editList(id) {
-    state.editingListId = id;
-    state.activeView = 'editor';
-    render();
-}
-
-function deleteList(id) {
-    state.lists = state.lists.filter(l => l.id !== id);
-    save();
-}
-
-function toggleList(id) {
-    const l = state.lists.find(x => x.id === id);
-    if(l) {
-        l.enabled = !l.enabled;
-        save();
-    }
-}
-
-function updateListProperty(key, val) {
-    const l = state.lists.find(x => x.id === state.editingListId);
-    if(l) {
-        l[key] = val;
-        save();
-    }
-}
-
-function updateListStyle(bg, txt) {
-    const l = state.lists.find(x => x.id === state.editingListId);
-    if(l) {
-        l.styles = { backgroundColor: bg, color: txt };
-        save();
-    }
-}
-
-function toggleListOption(key) {
-    const l = state.lists.find(x => x.id === state.editingListId);
-    if(l) {
-        l.options[key] = !l.options[key];
-        save();
-    }
-}
-
-function removeWord(w) {
-    const l = state.lists.find(x => x.id === state.editingListId);
-    if(l) {
-        l.words = l.words.filter(word => word !== w);
-        save();
-    }
 }
 
 // Initialize
