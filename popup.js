@@ -257,7 +257,11 @@ function renderEditorHtml() {
 
         <div class="input-group" style="margin-bottom: 0;">
              <div class="flex justify-between items-center mb-2">
-                <label class="label" style="margin:0">Keywords</label>
+                <div class="flex items-center gap-2">
+                    <label class="label" style="margin:0">Keywords</label>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.7;">(${list.words.length})</span>
+                </div>
+                ${list.words.length > 0 ? `<button id="btn-clear-words" class="btn btn-secondary" style="font-size: 0.7rem; padding: 2px 8px; height: auto;">Clear All</button>` : ''}
              </div>
             <form id="add-word-form" class="word-input-container">
                 <input type="text" id="new-word-input" class="word-input" placeholder="Type a word and press Enter..." autocomplete="off">
@@ -435,6 +439,16 @@ function attachEvents() {
                 save();
             });
         });
+
+        const clearBtn = document.getElementById('btn-clear-words');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to remove all keywords from this list?')) {
+                    list.words = [];
+                    save();
+                }
+            });
+        }
 
         const form = document.getElementById('add-word-form');
         if (form) {
