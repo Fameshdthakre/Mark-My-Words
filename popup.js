@@ -375,7 +375,12 @@ function attachEvents() {
         if (!list) return;
 
         const nameInput = document.getElementById('input-name');
-        if (nameInput) nameInput.addEventListener('input', (e) => { list.name = e.target.value; save(); });
+        if (nameInput) {
+            // Update state on input to keep it fresh in memory
+            nameInput.addEventListener('input', (e) => { list.name = e.target.value; });
+            // Save and re-render only when done editing (blur/enter)
+            nameInput.addEventListener('change', () => { save(); });
+        }
 
         document.querySelectorAll('.option-card').forEach(card => {
             card.addEventListener('click', () => {
@@ -411,6 +416,28 @@ function attachEvents() {
                     save();
                 } else {
                     input.value = '';
+                }
+            });
+        }
+
+        const newInput = document.getElementById('new-word-input');
+        if (newInput) {
+            newInput.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const lines = paste.split(/\r\n|\r|\n/);
+                let added = false;
+
+                lines.forEach(line => {
+                    const val = line.trim();
+                    if (val && !list.words.includes(val)) {
+                        list.words.push(val);
+                        added = true;
+                    }
+                });
+
+                if (added) {
+                    save();
                 }
             });
         }
@@ -472,7 +499,10 @@ function attachEvents() {
                             // Let's replace for simplicity and predictability
                             state.config = imported;
                             // Ensure structure integrity
-                            if(!state.config.settings) state.config.settings = DEFAULT_CONFIG.settings;
+                            if(!state.config.settings) {
+                                // Clone default settings to avoid mutating the constant
+                                state.config.settings = JSON.parse(JSON.stringify(DEFAULT_CONFIG.settings));
+                            }
                             save();
                             alert('Rules imported successfully!');
                         } else {
