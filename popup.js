@@ -258,19 +258,19 @@ function renderDashboardHtml() {
 
     return `
     <div class="dashboard-header">
-        <div style="flex: 1; display: flex; align-items: center; gap: 1rem;">
+        <div style="flex: 1; display: flex; align-items: center; gap: 0.75rem;">
             <div>
-                <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
-                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">${lists.length} / ${state.config.lists.length} rules</p>
+                <h2 style="font-size: 1rem; font-weight: 600; margin: 0;">Your Rules</h2>
+                <p style="font-size: 0.7rem; color: var(--text-muted); margin: 0.15rem 0 0;">${lists.length} / ${state.config.lists.length} active</p>
             </div>
             <div style="position: relative;">
-                <button id="btn-toggle-search" class="btn btn-icon" title="Search">${ICONS.search}</button>
-                <div id="search-container" style="display: ${state.searchVisible ? 'block' : 'none'}; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 0.5rem; width: 150px; background: var(--bg-glass); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.25rem;">
-                    <input type="text" id="input-search" value="${state.searchQuery}" placeholder="Search..." style="width: 100%; background: transparent; border: none; color: white; font-size: 0.8rem; padding: 0.25rem; outline: none;">
+                <button id="btn-toggle-search" class="btn btn-icon" title="Search" aria-label="Search" style="padding: 0.4rem;">${ICONS.search}</button>
+                <div id="search-container" style="display: ${state.searchVisible ? 'block' : 'none'}; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 0.5rem; width: 140px; background: var(--bg-glass); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.25rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 20;">
+                    <input type="text" id="input-search" value="${state.searchQuery}" placeholder="Search..." style="width: 100%; background: transparent; border: none; color: white; font-size: 0.75rem; padding: 0.25rem; outline: none;">
                 </div>
             </div>
         </div>
-        <button id="btn-create" class="btn btn-primary">${ICONS.plus} New</button>
+        <button id="btn-create" class="btn btn-primary" title="Create New Rule" aria-label="Create New Rule" style="padding: 0.6rem; border-radius: 50%; width: 36px; height: 36px;">${ICONS.plus}</button>
     </div>
     ${alertHtml}
     <div class="list-container">${listsHtml}</div>`;
