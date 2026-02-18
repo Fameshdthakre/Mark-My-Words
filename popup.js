@@ -111,6 +111,13 @@ function notifyContentScript() {
 function render() {
     const app = document.getElementById('app');
 
+    // Create Toast Container if missing
+    if (!document.getElementById('toast-container')) {
+        const tc = document.createElement('div');
+        tc.id = 'toast-container';
+        document.body.appendChild(tc);
+    }
+
     // Header
     const headerHtml = `
     <header>
@@ -126,9 +133,9 @@ function render() {
         </div>
         <div>
             ${state.activeView === 'dashboard'
-                ? `<button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" style="margin-right: 4px;">${ICONS.eye}</button>
-                   <button class="btn btn-icon" id="btn-settings" title="Settings">${ICONS.settings}</button>`
-                : `<button id="nav-back" class="btn btn-secondary" style="font-size: 0.75rem;">${ICONS.chevronLeft} Back</button>`
+                ? `<button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" aria-label="Re-scan Page" style="margin-right: 4px;">${ICONS.eye}</button>
+                   <button class="btn btn-icon" id="btn-settings" title="Settings" aria-label="Settings">${ICONS.settings}</button>`
+                : `<button id="nav-back" class="btn btn-secondary" style="font-size: 0.75rem;" aria-label="Go Back">${ICONS.chevronLeft} Back</button>`
             }
         </div>
     </header>`;
@@ -198,16 +205,28 @@ function renderDashboardHtml() {
             </div>
             <button id="btn-create" class="btn btn-primary">${ICONS.plus} New</button>
         </div>
-        <div style="padding: 4rem 2rem; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-            <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--bg-glass); display: flex; items-center: center; justify-content: center; color: var(--text-muted);">
-               ${ICONS.zap}
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; color: var(--text-muted);">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, rgba(109, 40, 217, 0.2), rgba(139, 92, 246, 0.2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; box-shadow: 0 0 20px rgba(109, 40, 217, 0.3);">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-light);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </div>
-            <span>No rules yet. Create one to start highlighting!</span>
+            <h3 style="margin: 0 0 0.5rem; color: var(--text-main); font-size: 1.1rem;">No Highlights Yet</h3>
+            <p style="margin: 0 0 1.5rem; font-size: 0.85rem; max-width: 240px; line-height: 1.5;">Create your first rule to start highlighting important keywords on any webpage.</p>
+            <button id="btn-get-started" class="btn btn-primary" aria-label="Get Started">${ICONS.plus} Get Started</button>
         </div>`;
     }
 
-    const listsHtml = lists.map((list, index) => `
-        <div class="list-item" data-id="${list.id}" draggable="true">
+    const listsHtml = lists.map((list, index) => {
+        // Check if this item was just added (simple heuristic or state tracking could be better, but for now we assume new items are at end if created)
+        // Better: We rely on the fact that re-renders happen.
+        // To make it specific, we could add a temporary 'isNew' flag in state, but simpler is just to not over-engineer for now.
+        // Let's just rely on CSS transitions for hover. For entry animation, we need a flag.
+        const isNew = list.isNew === true;
+        // Clean up flag after render (in a timeout or next cycle) - but state is immutable-ish here.
+        // We will just add the class if the ID matches state.lastCreatedId
+        const animationClass = (state.lastCreatedId === list.id) ? 'new-item' : '';
+
+        return `
+        <div class="list-item ${animationClass}" data-id="${list.id}" draggable="true">
             <div class="drag-handle" style="cursor: grab; color: var(--text-muted); opacity: 0.5; padding: 0.5rem;">
                 ${ICONS.grip}
             </div>
@@ -226,11 +245,16 @@ function renderDashboardHtml() {
                 </div>
             </div>
 
-            <button class="btn btn-icon" data-action="delete" data-id="${list.id}" style="opacity: 0.6;">
+            <button class="btn btn-icon" data-action="delete" data-id="${list.id}" title="Delete Rule" aria-label="Delete Rule" style="opacity: 0.6;">
                 ${ICONS.trash}
             </button>
         </div>
-    `).join('');
+    `}).join('');
+
+    // Clear the animation flag after render
+    if (state.lastCreatedId) {
+        setTimeout(() => { state.lastCreatedId = null; }, 500);
+    }
 
     return `
     <div class="dashboard-header">
@@ -406,6 +430,9 @@ function attachEvents() {
 
     const createBtn = document.getElementById('btn-create');
     if (createBtn) createBtn.addEventListener('click', createList);
+
+    const getStartedBtn = document.getElementById('btn-get-started');
+    if (getStartedBtn) getStartedBtn.addEventListener('click', createList);
 
     const settingsBtn = document.getElementById('btn-settings');
     if (settingsBtn) settingsBtn.addEventListener('click', () => { state.activeView = 'settings'; render(); });
@@ -720,18 +747,63 @@ function attachEvents() {
                                 state.config.settings = JSON.parse(JSON.stringify(DEFAULT_CONFIG.settings));
                             }
                             save();
-                            alert('Rules imported successfully!');
+                            showToast('Rules imported successfully!', 'success');
                         } else {
-                            alert('Invalid JSON format.');
+                            showToast('Invalid JSON format.', 'error');
                         }
                     } catch (err) {
-                        alert('Error parsing JSON.');
+                        showToast('Error parsing JSON.', 'error');
                     }
                 };
                 reader.readAsText(file);
             });
         }
     }
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    // Icon based on type
+    let icon = ICONS.check;
+    if (type === 'error') icon = ICONS.alert;
+
+    toast.innerHTML = `<div style="flex-shrink:0;">${icon}</div><div>${message}</div>`;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        toast.addEventListener('animationend', () => toast.remove());
+    }, 3000);
+}
+
+function confirmAction(message, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    overlay.innerHTML = `
+        <div class="modal">
+            <h3 style="margin: 0 0 0.5rem; font-size: 1.1rem;">Confirm Action</h3>
+            <p style="margin: 0 0 1.5rem; color: var(--text-muted); font-size: 0.9rem;">${message}</p>
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="modal-confirm" class="btn btn-primary" style="background: var(--danger);">Confirm</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Focus management could be added here
+
+    document.getElementById('modal-cancel').addEventListener('click', () => overlay.remove());
+    document.getElementById('modal-confirm').addEventListener('click', () => {
+        onConfirm();
+        overlay.remove();
+    });
 }
 
 function getDragAfterElement(container, y) {
@@ -758,6 +830,7 @@ function createList() {
         options: { caseSensitive: false, wholeWord: true, isRegex: false }
     };
     state.config.lists.push(newList);
+    state.lastCreatedId = newList.id; // Mark for animation
     state.editingListId = newList.id;
     state.activeView = 'editor';
     save();
