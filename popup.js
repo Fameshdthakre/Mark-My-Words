@@ -121,7 +121,8 @@ function render() {
         </div>
         <div>
             ${state.activeView === 'dashboard'
-                ? `<button class="btn btn-icon" id="btn-settings" title="Settings">${ICONS.settings}</button>`
+                ? `<button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" style="margin-right: 4px;">${ICONS.eye}</button>
+                   <button class="btn btn-icon" id="btn-settings" title="Settings">${ICONS.settings}</button>`
                 : `<button id="nav-back" class="btn btn-secondary" style="font-size: 0.75rem;">${ICONS.chevronLeft} Back</button>`
             }
         </div>
@@ -265,8 +266,9 @@ function renderEditorHtml() {
              </div>
             <form id="add-word-form" class="word-input-container">
                 <input type="text" id="new-word-input" class="word-input" placeholder="Type a word and press Enter..." autocomplete="off">
-                <button type="submit" class="btn btn-secondary" style="border-radius: 0.75rem;">${ICONS.plus}</button>
+                <button type="submit" id="btn-add-word" class="btn btn-secondary" style="border-radius: 0.75rem;">${ICONS.plus}</button>
             </form>
+            <div id="regex-error-msg" class="word-input-error">Invalid Regular Expression</div>
             <div class="tag-container">
                 ${list.words.map(w => `
                     <span class="tag" style="background-color: ${list.styles.backgroundColor}20; color: white; border: 1px solid ${list.styles.backgroundColor}60;">
@@ -360,6 +362,17 @@ function attachEvents() {
 
     const settingsBtn = document.getElementById('btn-settings');
     if (settingsBtn) settingsBtn.addEventListener('click', () => { state.activeView = 'settings'; render(); });
+
+    const refreshBtn = document.getElementById('btn-refresh');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+             notifyContentScript();
+             // Visual feedback
+             const originalIcon = refreshBtn.innerHTML;
+             refreshBtn.innerHTML = ICONS.check;
+             setTimeout(() => refreshBtn.innerHTML = originalIcon, 1500);
+        });
+    }
 
     // 2. Dashboard List Items
     const listContainer = document.querySelector('.list-container');
@@ -467,6 +480,31 @@ function attachEvents() {
 
         const newInput = document.getElementById('new-word-input');
         if (newInput) {
+            // Regex Validation
+            newInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const btn = document.getElementById('btn-add-word');
+                const errorMsg = document.getElementById('regex-error-msg');
+
+                if (list.options.isRegex && val) {
+                    try {
+                        new RegExp(val);
+                        newInput.classList.remove('invalid');
+                        if(btn) btn.disabled = false;
+                        if(errorMsg) errorMsg.style.display = 'none';
+                    } catch (err) {
+                        newInput.classList.add('invalid');
+                        if(btn) btn.disabled = true;
+                        if(errorMsg) errorMsg.style.display = 'block';
+                        if(errorMsg) errorMsg.textContent = "Invalid Regex: " + err.message.split(':')[1] || "Syntax Error";
+                    }
+                } else {
+                    newInput.classList.remove('invalid');
+                    if(btn) btn.disabled = false;
+                    if(errorMsg) errorMsg.style.display = 'none';
+                }
+            });
+
             newInput.addEventListener('paste', (e) => {
                 e.preventDefault();
                 const paste = (e.clipboardData || window.clipboardData).getData('text');
@@ -475,7 +513,17 @@ function attachEvents() {
 
                 lines.forEach(line => {
                     const val = line.trim();
-                    if (val && !list.words.includes(val)) {
+                    if (!val) return;
+
+                    // Case-Insensitive check
+                    let exists = false;
+                    if (!list.options.caseSensitive) {
+                        exists = list.words.some(w => w.toLowerCase() === val.toLowerCase());
+                    } else {
+                        exists = list.words.includes(val);
+                    }
+
+                    if (!exists) {
                         list.words.push(val);
                         added = true;
                     }

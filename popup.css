@@ -333,6 +333,53 @@ header {
 }
 .word-input:focus { outline: none; border-color: var(--primary-light); }
 
+.word-input.invalid {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 1px var(--danger);
+}
+
+.word-input-container {
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.word-input-container::after {
+    content: "Invalid Regex";
+    position: absolute;
+    bottom: -1.25rem;
+    left: 0;
+    color: var(--danger);
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.word-input.invalid ~ button {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.word-input.invalid + button + .word-input-container::after,
+.word-input.invalid ~ .word-input-container::after {
+    /* This selector is tricky with current DOM structure, simpler to toggle class on container */
+}
+
+/* Simplified approach for error message */
+.word-input-error {
+    color: var(--danger);
+    font-size: 0.7rem;
+    margin-top: -0.5rem;
+    margin-bottom: 0.5rem;
+    display: none;
+    padding-left: 0.5rem;
+}
+.word-input.invalid ~ .word-input-error {
+    display: block;
+}
+
 .tag-container {
     display: flex;
     flex-wrap: wrap;
