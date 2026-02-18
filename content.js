@@ -1,10 +1,11 @@
 /**
  * Content Script: content.js
- * This script runs on the web pages you visit.
- * It reads the settings from Chrome Storage and highlights the text.
+ * V4 Update: Uses chrome.storage.sync and new Settings logic
  */
 
-// Debounce helper to prevent freezing on rapid updates
+const STORAGE_KEY = 'highlighter_config_v4';
+
+// Debounce helper
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -18,18 +19,56 @@ function debounce(func, wait) {
 }
 
 function applyHighlights() {
-    chrome.storage.local.get(['highlighter_lists_v3'], (result) => {
-        if (!result.highlighter_lists_v3) return;
-        
-        // Remove existing highlights to prevent duplication/mess
-        document.querySelectorAll('mark.highlight-pro-ext').forEach(mark => {
-            const parent = mark.parentNode;
-            parent.replaceChild(document.createTextNode(mark.textContent), mark);
-            parent.normalize(); // Merge text nodes
-        });
+    if (!chrome.runtime?.id) {
+        // Extension context invalidated
+        if (observer) observer.disconnect();
+        return;
+    }
 
-        const lists = result.highlighter_lists_v3.filter(l => l.enabled);
-        if (lists.length === 0) return;
+    try {
+        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+            if (chrome.runtime.lastError) return; // Handle potential error
+            
+            const config = result[STORAGE_KEY];
+            if (!config) return;
+
+            // 1. Check Global Enable
+        if (config.settings && config.settings.globalEnabled === false) {
+            removeAllHighlights();
+            updateBadge(0);
+            return;
+        }
+
+        // 2. Check Excluded Domains
+        if (config.settings && config.settings.excludedDomains) {
+            const currentDomain = window.location.hostname;
+            const isExcluded = config.settings.excludedDomains.some(domain => 
+                currentDomain.includes(domain)
+            );
+            if (isExcluded) {
+                removeAllHighlights();
+                updateBadge(0);
+                return;
+            }
+        }
+
+        // 3. Check Performance Mode
+        if (config.settings && config.settings.performanceMode) {
+            // Rough check for page size
+            if (document.body.innerText.length > 50000) {
+                console.log('Highlight Pro: Performance mode active. Skipping large page.');
+                return;
+            }
+        }
+        
+        // Remove existing to re-apply
+        removeAllHighlights();
+
+        const lists = config.lists.filter(l => l.enabled);
+        if (lists.length === 0) {
+            updateBadge(0);
+            return;
+        }
 
         const walker = document.createTreeWalker(
             document.body,
@@ -37,9 +76,10 @@ function applyHighlights() {
             {
                 acceptNode: (node) => {
                     // Skip script, style, and already highlighted nodes
-                    if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'].includes(node.parentNode.tagName)) {
+                    if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME'].includes(node.parentNode.tagName)) {
                         return NodeFilter.FILTER_REJECT;
                     }
+                    if (node.parentNode.isContentEditable) return NodeFilter.FILTER_REJECT;
                     return NodeFilter.FILTER_ACCEPT;
                 }
             }
@@ -47,22 +87,24 @@ function applyHighlights() {
 
         const textNodes = [];
         let currentNode;
+        // Limit nodes in performance mode if needed, but we already skipped large pages
         while (currentNode = walker.nextNode()) {
             textNodes.push(currentNode);
         }
 
-        // Apply highlighting (Simplified version of the React Preview logic)
-        // Note: Direct DOM manipulation is safer than innerHTML replacement for arbitrary pages
         textNodes.forEach(node => {
+            if (!node.nodeValue.trim()) return;
+            
             let text = node.nodeValue;
             let rangesToHighlight = [];
 
             lists.forEach(list => {
                 let patternSource;
-                
                 try {
                     if (list.options.isRegex) {
-                        const valid = list.words.filter(w => { try { new RegExp(w); return true; } catch { return false; } });
+                        const valid = list.words.filter(w => { 
+                            try { new RegExp(w); return true; } catch { return false; } 
+                        });
                         if (valid.length === 0) return;
                         patternSource = `(${valid.join('|')})`;
                     } else {
@@ -80,25 +122,25 @@ function applyHighlights() {
                             style: list.styles
                         });
                     }
-                } catch (e) {
-                    // Invalid regex in user input, ignore
-                }
+                } catch (e) { }
             });
 
-            // If we found matches in this text node
             if (rangesToHighlight.length > 0) {
-                // Sort ranges and process
-                // Note: Complex overlap handling is omitted for brevity, taking the first valid match strategy
-                // For a production extension, use a library like 'mark.js'
+                const range = rangesToHighlight[0]; // Simple first-match win
                 
-                const range = rangesToHighlight[0]; // Simple implementation: take first match
                 const span = document.createElement('mark');
                 span.className = 'highlight-pro-ext';
+                
+                // Styles
                 span.style.backgroundColor = range.style.backgroundColor;
                 span.style.color = range.style.color;
+                span.style.borderRadius = '4px';
+                span.style.padding = '0 3px';
+                span.style.margin = '0 1px';
+                span.style.boxShadow = `0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px ${range.style.backgroundColor}40`;
+                span.style.fontInherit = 'true';
+                
                 span.textContent = text.substring(range.start, range.end);
-                span.style.borderRadius = '2px';
-                span.style.padding = '0 2px';
 
                 const afterText = text.substring(range.end);
                 const beforeText = text.substring(0, range.start);
@@ -111,19 +153,51 @@ function applyHighlights() {
                 parent.removeChild(node);
             }
         });
+
+            // Update Badge Count
+            updateBadge(document.querySelectorAll('mark.highlight-pro-ext').length);
+        });
+    } catch (e) {
+        console.log("Highlight Pro: Extension context invalidated.");
+        if (observer) observer.disconnect();
+    }
+}
+
+function removeAllHighlights() {
+    document.querySelectorAll('mark.highlight-pro-ext').forEach(mark => {
+        const parent = mark.parentNode;
+        if (parent) {
+            parent.replaceChild(document.createTextNode(mark.textContent), mark);
+            parent.normalize();
+        }
     });
 }
 
-// Listen for updates from the popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "refresh_highlights") {
-        applyHighlights();
-    }
-});
+function updateBadge(count) {
+    if (!chrome.runtime?.id) return;
+    try {
+        chrome.runtime.sendMessage({
+            action: "update_badge",
+            count: count
+        }, () => { if(chrome.runtime.lastError){ /* ignore */ } });
+    } catch (e) { /* context invalid */ }
+}
+
+// Listen for updates
+try {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "refresh_highlights") {
+            applyHighlights();
+        }
+    });
+} catch (e) { /* context invalid */ }
 
 // Run on load
-applyHighlights();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyHighlights);
+} else {
+    applyHighlights();
+}
 
-// Optional: Observe DOM changes (for dynamic content like infinite scroll)
-const observer = new MutationObserver(debounce(applyHighlights, 1000));
+const observer = new MutationObserver(debounce(applyHighlights, 1500));
 observer.observe(document.body, { childList: true, subtree: true });

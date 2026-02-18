@@ -1,356 +1,840 @@
 // --- Configuration ---
-const API_KEY = ""; // Runtime provided
+const STORAGE_KEY = 'highlighter_config_v4'; // Changed key for V4
 
 // --- Icons (SVG Strings) ---
 const ICONS = {
-    zap: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
-    plus: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
-    trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
-    edit: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
-    x: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
-    settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
-    sparkles: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>`,
-    chevronLeft: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
-    eye: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+    zap: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
+    plus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+    trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+    edit: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
+    x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+    settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+    chevronLeft: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
+    eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+    download: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+    upload: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`,
+    check: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+    search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+    grip: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>`,
+    alert: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`
 };
 
 const PRESETS = [
-    { bg: '#4f46e5', text: '#ffffff', name: 'Indigo' },
+    { bg: '#6610f2', text: '#ffffff', name: 'Electric Purple' },
+    { bg: '#3b82f6', text: '#ffffff', name: 'Blue' },
+    { bg: '#06b6d4', text: '#ffffff', name: 'Cyan' },
     { bg: '#10b981', text: '#ffffff', name: 'Emerald' },
     { bg: '#f59e0b', text: '#ffffff', name: 'Amber' },
     { bg: '#ef4444', text: '#ffffff', name: 'Rose' },
-    { bg: '#8b5cf6', text: '#ffffff', name: 'Violet' },
-    { bg: '#ec4899', text: '#ffffff', name: 'Pink' },
-    { bg: '#06b6d4', text: '#ffffff', name: 'Cyan' },
-    { bg: '#ffffff', text: '#000000', name: 'Pure White' },
+    { bg: '#d946ef', text: '#ffffff', name: 'Fuchsia' },
+    { bg: '#ffffff', text: '#000000', name: 'White' },
 ];
 
-const DEFAULT_LIST = {
-    id: 'default-1',
-    name: 'Important Terms',
-    words: ['React', 'Extension', 'highlight', 'code'],
-    styles: { backgroundColor: '#4f46e5', color: '#ffffff' },
-    enabled: true,
-    options: { caseSensitive: false, wholeWord: true, isRegex: false }
+const DEFAULT_CONFIG = {
+    lists: [{
+        id: 'default-1',
+        name: 'Important Terms',
+        words: ['React', 'Extension', 'highlight', 'code'],
+        styles: { backgroundColor: '#6610f2', color: '#ffffff' },
+        enabled: true,
+        options: { caseSensitive: false, wholeWord: true, isRegex: false }
+    }],
+    settings: {
+        globalEnabled: true,
+        excludedDomains: [],
+        performanceMode: false
+    }
 };
 
 // --- State ---
 let state = {
-    lists: [],
-    activeView: 'dashboard', // 'dashboard' | 'editor'
+    config: DEFAULT_CONFIG,
+    activeView: 'dashboard', // 'dashboard' | 'editor' | 'settings'
     editingListId: null,
-    isExtracting: false
+    searchQuery: '',
+    searchVisible: false
 };
-
-// --- Gemini API ---
-async function callGemini(prompt) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                systemInstruction: { parts: [{ text: "You are a helpful assistant. Return only the requested comma-separated list." }] }
-            })
-        });
-        const result = await response.json();
-        return result.candidates?.[0]?.content?.parts?.[0]?.text;
-    } catch (error) {
-        console.error("Gemini Error:", error);
-        return null;
-    }
-}
 
 // --- App Logic ---
 
 function init() {
-    // Load from Storage
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(['highlighter_lists_v3'], (result) => {
-            state.lists = result.highlighter_lists_v3 || [DEFAULT_LIST];
-            render();
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+        // Try to load from SYNC
+        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+            if (result[STORAGE_KEY]) {
+                state.config = result[STORAGE_KEY];
+                render();
+            } else {
+                // If sync is empty, check LOCAL for migration
+                chrome.storage.local.get(['highlighter_lists_v3'], (localResult) => {
+                    if (localResult.highlighter_lists_v3) {
+                        // Migrate V3 lists to V4 config
+                        state.config.lists = localResult.highlighter_lists_v3;
+                        save(); // This will save to sync
+                    } else {
+                        // No data anywhere, use defaults
+                        state.config = DEFAULT_CONFIG;
+                        save();
+                    }
+                });
+            }
         });
     } else {
-        const saved = localStorage.getItem('highlighter_lists_v3');
-        state.lists = saved ? JSON.parse(saved) : [DEFAULT_LIST];
+        // Fallback for non-extension environment
+        const saved = localStorage.getItem(STORAGE_KEY);
+        state.config = saved ? JSON.parse(saved) : DEFAULT_CONFIG;
         render();
     }
 }
 
 function save() {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.set({ 'highlighter_lists_v3': state.lists }, () => {
-            chrome.tabs?.query({active: true, currentWindow: true}, function(tabs) {
-                if(tabs[0]?.id) chrome.tabs.sendMessage(tabs[0].id, {action: "refresh_highlights"});
-            });
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+        chrome.storage.sync.set({ [STORAGE_KEY]: state.config }, () => {
+            notifyContentScript();
         });
     }
-    localStorage.setItem('highlighter_lists_v3', JSON.stringify(state.lists));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config));
     render();
+}
+
+function notifyContentScript() {
+    chrome.tabs?.query({active: true, currentWindow: true}, function(tabs) {
+        if (chrome.runtime.lastError) return;
+        if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(tabs[0].id, {action: "refresh_highlights"}, () => {
+                if(chrome.runtime.lastError) { /* ignore */ }
+            });
+        }
+    });
 }
 
 function render() {
     const app = document.getElementById('app');
-    app.innerHTML = `
-        ${renderHeader()}
-        <main style="flex: 1; overflow-y: auto;">
-            ${state.activeView === 'dashboard' ? renderDashboard() : renderEditor()}
-        </main>
-        ${renderPreview()}
-    `;
-    
-    // Re-attach event listeners after render
-    attachEvents();
-}
 
-function renderHeader() {
-    return `
+    // Create Toast Container if missing
+    if (!document.getElementById('toast-container')) {
+        const tc = document.createElement('div');
+        tc.id = 'toast-container';
+        document.body.appendChild(tc);
+    }
+    
+    // Header
+    const headerHtml = `
     <header>
         <div class="flex items-center">
             <div class="logo-box">${ICONS.zap}</div>
             <div>
                 <h1 class="app-title">Highlight Pro</h1>
                 <div class="status-badge">
-                    <div class="status-dot"></div> Extension Active
+                    <div class="status-dot" style="background-color: ${state.config.settings.globalEnabled ? 'var(--accent)' : 'var(--text-muted)'}"></div> 
+                    ${state.config.settings.globalEnabled ? 'Active' : 'Paused'}
                 </div>
             </div>
         </div>
         <div>
             ${state.activeView === 'dashboard' 
-                ? `<button class="btn btn-icon">${ICONS.settings}</button>` 
-                : `<button id="nav-back" class="btn btn-secondary" style="padding: 0.25rem 0.75rem;">${ICONS.chevronLeft} Back</button>`
+                ? `<button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" aria-label="Re-scan Page" style="margin-right: 4px;">${ICONS.eye}</button>
+                   <button class="btn btn-icon" id="btn-settings" title="Settings" aria-label="Settings">${ICONS.settings}</button>` 
+                : `<button id="nav-back" class="btn btn-secondary" style="font-size: 0.75rem;" aria-label="Go Back">${ICONS.chevronLeft} Back</button>`
             }
         </div>
     </header>`;
+
+    // Main Content
+    let mainHtml = '';
+    if (state.activeView === 'dashboard') {
+        mainHtml = renderDashboardHtml();
+    } else if (state.activeView === 'editor') {
+        mainHtml = renderEditorHtml();
+    } else if (state.activeView === 'settings') {
+        mainHtml = renderSettingsHtml();
+    }
+
+    // Preview (Only show on Dashboard/Editor)
+    const previewHtml = state.activeView !== 'settings' ? renderPreviewHtml() : '';
+
+    app.innerHTML = `
+        ${headerHtml}
+        <main style="flex: 1; overflow-y: auto; padding-bottom: 2rem;">
+            ${mainHtml}
+        </main>
+        ${previewHtml}
+    `;
+    
+    attachEvents();
 }
 
-function renderDashboard() {
-    if (state.lists.length === 0) {
+// --- HTML Generators ---
+
+function renderDashboardHtml() {
+    let lists = state.config.lists;
+    
+    // Filter by search
+    if (state.searchQuery) {
+        const query = state.searchQuery.toLowerCase();
+        lists = lists.filter(l => 
+            l.name.toLowerCase().includes(query) || 
+            l.words.some(w => w.toLowerCase().includes(query))
+        );
+    }
+
+    // Storage Usage Check
+    const storageUsage = new Blob([JSON.stringify(state.config)]).size;
+    const quotaBytes = 102400; // chrome.storage.sync.QUOTA_BYTES
+    const usagePercent = (storageUsage / quotaBytes) * 100;
+    const isOverLimit = usagePercent > 90;
+
+    let alertHtml = '';
+    if (isOverLimit) {
+        alertHtml = `
+        <div style="margin: 0 1.5rem 1rem; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); border-radius: 0.75rem; padding: 0.75rem; display: flex; align-items: center; gap: 0.75rem; color: var(--danger); font-size: 0.8rem;">
+            ${ICONS.alert}
+            <div>
+                <strong>Storage Warning</strong><br>
+                You are using ${usagePercent.toFixed(1)}% of your sync quota. Consider removing some rules.
+            </div>
+        </div>`;
+    }
+
+    if (state.config.lists.length === 0) {
         return `
         <div class="dashboard-header">
             <div>
-                <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Library</h2>
-                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">Manage your rules</p>
+                <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">0 active rules</p>
             </div>
-            <button id="btn-create" class="btn btn-primary">${ICONS.plus} New Rule</button>
+            <button id="btn-create" class="btn btn-primary">${ICONS.plus}</button>
         </div>
-        <div style="padding: 2rem; text-align: center; color: var(--text-muted);">Library is empty</div>`;
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; color: var(--text-muted);">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, rgba(109, 40, 217, 0.2), rgba(139, 92, 246, 0.2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; box-shadow: 0 0 20px rgba(109, 40, 217, 0.3);">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-light);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <h3 style="margin: 0 0 0.5rem; color: var(--text-main); font-size: 1.1rem;">No Highlights Yet</h3>
+            <p style="margin: 0 0 1.5rem; font-size: 0.85rem; max-width: 240px; line-height: 1.5;">Create your first rule to start highlighting important keywords on any webpage.</p>
+            <button id="btn-get-started" class="btn btn-primary" aria-label="Get Started">${ICONS.plus} Get Started</button>
+        </div>`;
     }
 
-    const listsHtml = state.lists.map(list => `
-        <div class="list-item" onclick="editList('${list.id}')">
-            <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" onclick="event.stopPropagation(); toggleList('${list.id}')">
+    const listsHtml = lists.map((list, index) => {
+        // Check if this item was just added (simple heuristic or state tracking could be better, but for now we assume new items are at end if created)
+        // Better: We rely on the fact that re-renders happen. 
+        // To make it specific, we could add a temporary 'isNew' flag in state, but simpler is just to not over-engineer for now.
+        // Let's just rely on CSS transitions for hover. For entry animation, we need a flag.
+        const isNew = list.isNew === true;
+        // Clean up flag after render (in a timeout or next cycle) - but state is immutable-ish here.
+        // We will just add the class if the ID matches state.lastCreatedId
+        const animationClass = (state.lastCreatedId === list.id) ? 'new-item' : '';
+        
+        return `
+        <div class="list-item ${animationClass}" data-id="${list.id}" draggable="true">
+            <div class="drag-handle" style="cursor: grab; color: var(--text-muted); opacity: 0.5; padding: 0.5rem;">
+                ${ICONS.grip}
+            </div>
+            <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" data-action="toggle" data-id="${list.id}">
                 <div class="toggle-dot"></div>
             </div>
-            <div style="flex: 1; overflow: hidden; cursor: pointer;">
-                <div style="font-weight: 500; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${list.name}</div>
-                <div class="flex items-center gap-2" style="margin-top: 0.25rem;">
-                    <span style="font-size: 0.625rem; color: var(--text-muted); font-weight: 700;">${list.words.length} ITEMS</span>
-                    <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${list.styles.backgroundColor};"></div>
+            
+            <div class="list-content" style="flex: 1; min-width: 0; padding: 0 0.5rem;" data-action="edit" data-id="${list.id}">
+                <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">
+                    ${list.name}
+                    ${state.searchQuery ? `<span style="font-size: 0.7rem; color: var(--accent); margin-left: 0.5rem;">(matches found)</span>` : ''}
+                </div>
+                <div class="flex items-center gap-2" style="margin-top: 0.35rem;">
+                    <div style="width: 6px; height: 6px; border-radius: 50%; background-color: ${list.styles.backgroundColor}; box-shadow: 0 0 6px ${list.styles.backgroundColor};"></div>
+                    <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">${list.words.length} KEYWORDS</span>
                 </div>
             </div>
-            <div class="flex gap-2">
-                <button class="btn btn-icon" onclick="event.stopPropagation(); deleteList('${list.id}')">${ICONS.trash}</button>
-            </div>
+            
+            <button class="btn btn-icon" data-action="delete" data-id="${list.id}" title="Delete Rule" aria-label="Delete Rule" style="opacity: 0.6;">
+                ${ICONS.trash}
+            </button>
         </div>
-    `).join('');
+    `}).join('');
+    
+    // Clear the animation flag after render
+    if (state.lastCreatedId) {
+        setTimeout(() => { state.lastCreatedId = null; }, 500);
+    }
 
     return `
     <div class="dashboard-header">
-        <div>
-            <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Library</h2>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">Manage rules</p>
+        <div style="flex: 1; display: flex; align-items: center; gap: 1rem;">
+            <div>
+                <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">${lists.length} / ${state.config.lists.length} rules</p>
+            </div>
+            <div style="position: relative;">
+                <button id="btn-toggle-search" class="btn btn-icon" title="Search">${ICONS.search}</button>
+                <div id="search-container" style="display: ${state.searchVisible ? 'block' : 'none'}; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 0.5rem; width: 150px; background: var(--bg-glass); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.25rem;">
+                    <input type="text" id="input-search" value="${state.searchQuery}" placeholder="Search..." style="width: 100%; background: transparent; border: none; color: white; font-size: 0.8rem; padding: 0.25rem; outline: none;">
+                </div>
+            </div>
         </div>
-        <div class="flex flex-col gap-2">
-            <button id="btn-create" class="btn btn-primary">${ICONS.plus} New Rule</button>
-            <button id="btn-ai" class="btn btn-secondary" ${state.isExtracting ? 'disabled' : ''}>
-                ${state.isExtracting ? '...' : ICONS.sparkles} AI Extract
-            </button>
-        </div>
+        <button id="btn-create" class="btn btn-primary">${ICONS.plus}</button>
     </div>
+    ${alertHtml}
     <div class="list-container">${listsHtml}</div>`;
 }
 
-function renderEditor() {
-    const list = state.lists.find(l => l.id === state.editingListId);
+function renderEditorHtml() {
+    const list = state.config.lists.find(l => l.id === state.editingListId);
     if (!list) return '';
 
     return `
     <div class="editor-view">
         <div class="input-group">
-            <label class="label">List Title</label>
-            <input type="text" class="title-input" value="${list.name}" onchange="updateListProperty('name', this.value)">
+            <label class="label">Rule Name</label>
+            <input type="text" id="input-name" class="title-input" value="${list.name}" placeholder="Enter rule name...">
         </div>
 
         <div class="options-grid">
-            <div class="option-card ${list.options.caseSensitive ? 'active' : ''}" onclick="toggleListOption('caseSensitive')">
-                <span>Aa</span> Match Case
+            <div class="option-card ${list.options.caseSensitive ? 'active' : ''}" data-action="toggleOption" data-key="caseSensitive">
+                <span style="font-size: 1.25rem; margin-bottom: 2px;">Aa</span> Match Case
             </div>
-            <div class="option-card ${list.options.wholeWord ? 'active' : ''}" onclick="toggleListOption('wholeWord')">
-                <span>Abc</span> Whole Word
+            <div class="option-card ${list.options.wholeWord ? 'active' : ''}" data-action="toggleOption" data-key="wholeWord">
+                <span style="font-size: 1.25rem; margin-bottom: 2px;">Abc</span> Whole Word
             </div>
-            <div class="option-card ${list.options.isRegex ? 'active' : ''}" onclick="toggleListOption('isRegex')">
-                <span>.*</span> Regex
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label class="label">Color Style</label>
-            <div class="color-picker-row">
-                ${PRESETS.map(p => `
-                    <button class="color-btn" style="background-color: ${p.bg}; color: ${p.text}; border: ${list.styles.backgroundColor === p.bg ? '2px solid white' : 'none'}" 
-                    onclick="updateListStyle('${p.bg}', '${p.text}')">Aa</button>
-                `).join('')}
-                <input type="color" value="${list.styles.backgroundColor}" onchange="updateListStyle(this.value, '#ffffff')" style="visibility: hidden; width: 0;">
+            <div class="option-card ${list.options.isRegex ? 'active' : ''}" data-action="toggleOption" data-key="isRegex">
+                <span style="font-size: 1.25rem; margin-bottom: 2px;">.*</span> Regex
             </div>
         </div>
 
         <div class="input-group">
+            <label class="label">Highlight Style</label>
+            <div class="color-picker-row" style="flex-wrap: wrap; gap: 0.5rem;">
+                ${PRESETS.map(p => {
+                    const isActive = list.styles.backgroundColor === p.bg;
+                    const style = isActive 
+                        ? `background-color: ${p.bg}; color: ${p.text}; box-shadow: 0 0 0 2px white, 0 0 10px ${p.bg}; transform: scale(1.1);`
+                        : `background-color: ${p.bg}; color: ${p.text};`;
+                    return `<button class="color-btn" style="${style}" data-action="setColor" data-bg="${p.bg}" data-text="${p.text}">Aa</button>`;
+                }).join('')}
+            </div>
+            
+            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label class="label" style="font-size: 0.75rem;">Background</label>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="color" id="custom-bg-picker" value="${list.styles.backgroundColor}" style="width: 100%; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <label class="label" style="font-size: 0.75rem;">Text</label>
+                     <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="color" id="custom-text-picker" value="${list.styles.color}" style="width: 100%; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-group" style="margin-bottom: 0;">
              <div class="flex justify-between items-center mb-2">
-                <label class="label" style="margin:0">Patterns</label>
-                <button id="btn-smart-fill" class="btn-icon" style="font-size: 10px; color: var(--primary); font-weight: bold; width: auto;">
-                    ${state.isExtracting ? '...' : '✨ Smart Fill'}
-                </button>
+                <div class="flex items-center gap-2">
+                    <label class="label" style="margin:0">Keywords</label>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.7;">(${list.words.length})</span>
+                </div>
+                ${list.words.length > 0 ? `<button id="btn-clear-words" class="btn btn-secondary" style="font-size: 0.7rem; padding: 2px 8px; height: auto;">Clear All</button>` : ''}
              </div>
             <form id="add-word-form" class="word-input-container">
-                <input type="text" id="new-word-input" class="word-input" placeholder="Add word or regex...">
-                <button type="submit" class="btn btn-secondary">Add</button>
+                <input type="text" id="new-word-input" class="word-input" placeholder="Type a word and press Enter..." autocomplete="off">
+                <button type="submit" id="btn-add-word" class="btn btn-secondary" style="border-radius: 0.75rem;">${ICONS.plus}</button>
             </form>
+            <div id="regex-error-msg" class="word-input-error">Invalid Regular Expression</div>
             <div class="tag-container">
                 ${list.words.map(w => `
-                    <span class="tag" style="color: ${list.styles.backgroundColor}; border-color: ${list.styles.backgroundColor}40; background-color: ${list.styles.backgroundColor}20;">
-                        ${w} <span style="cursor: pointer; margin-left: 4px;" onclick="removeWord('${w}')">${ICONS.x}</span>
+                    <span class="tag" style="background-color: ${list.styles.backgroundColor}20; color: white; border: 1px solid ${list.styles.backgroundColor}60;">
+                        ${w} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" data-action="removeWord" data-word="${w}">${ICONS.x}</span>
                     </span>
                 `).join('')}
+                ${list.words.length === 0 ? '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No keywords added yet.</span>' : ''}
             </div>
         </div>
     </div>`;
 }
 
-function renderPreview() {
-    const sampleText = `Hello! Highlight Pro AI is now active.
-Discover ✨ Smart Suggestions in the editor.
-Native JS makes this fast and CSP compliant!`;
-    
-    // Simulate highlighting logic for preview
-    let html = sampleText;
-    // Note: A full highlighter implementation for preview text in HTML is complex to do via Regex replace alone without breaking HTML tags,
-    // but for this simple plain-text preview, we can iterate.
-    // Ideally, we reuse the logic from content.js, but simplified here for the popup UI.
-    
-    // Simple render (no highlighting in preview for brevity in Vanilla version to avoid complex DOM node logic duplication)
-    // You can copy the logic from content.js if you want the preview to light up real-time.
-    
+function renderSettingsHtml() {
+    const s = state.config.settings;
     return `
-    <div class="preview-area">
-        <div class="flex items-center gap-2" style="font-size: 0.625rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem;">
-            ${ICONS.eye} Preview
+    <div class="editor-view">
+        <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">Settings</h2>
+
+        <!-- Global Toggle -->
+        <div class="list-item" style="cursor: default; margin-bottom: 1.5rem;">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 0.95rem; color: white;">Enable Extension</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Turn off highlighting globally</div>
+            </div>
+            <div class="toggle-switch ${s.globalEnabled ? 'on' : 'off'}" id="setting-global-toggle">
+                <div class="toggle-dot"></div>
+            </div>
         </div>
-        <div class="preview-box">${html}</div>
+
+        <!-- Performance Mode -->
+        <div class="list-item" style="cursor: default; margin-bottom: 1.5rem;">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 0.95rem; color: white;">Performance Mode</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Limit highlights on large pages (>50k chars)</div>
+            </div>
+            <div class="toggle-switch ${s.performanceMode ? 'on' : 'off'}" id="setting-perf-toggle">
+                <div class="toggle-dot"></div>
+            </div>
+        </div>
+
+        <!-- Excluded Domains -->
+        <div class="input-group">
+            <label class="label">Excluded Domains (One per line)</label>
+            <textarea id="setting-excluded" class="word-input" rows="4" style="width: 100%; resize: vertical; font-family: monospace;" placeholder="example.com&#10;gmail.com">${s.excludedDomains.join('\n')}</textarea>
+        </div>
+
+        <!-- Data Management -->
+        <div class="input-group" style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+            <label class="label">Data Management</label>
+            <div class="flex gap-2" style="margin-top: 0.5rem;">
+                <button id="btn-export" class="btn btn-secondary" style="flex: 1;">${ICONS.download} Export Rules</button>
+                <button id="btn-import-trigger" class="btn btn-secondary" style="flex: 1;">${ICONS.upload} Import Rules</button>
+                <input type="file" id="file-import" accept=".json" style="display: none;">
+            </div>
+        </div>
+        
+        <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
+            Highlighter Pro v1.1.0<br>
+            Sync enabled
+        </div>
     </div>`;
 }
 
-// --- Actions ---
+function renderPreviewHtml() {
+    const list = state.activeView === 'editor' ? state.config.lists.find(l => l.id === state.editingListId) : null;
+    let sampleText = "Preview: Highlight Pro makes it easy to style your web.";
+    
+    if (list) {
+         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Highlight Pro</span>`;
+         sampleText = `Preview: ${hl} makes it easy to style your web.`;
+    }
+
+    return `
+    <div class="preview-area">
+        <div class="flex items-center gap-2" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; letter-spacing: 0.05em;">
+            ${ICONS.eye} Live Preview
+        </div>
+        <div class="preview-box">${sampleText}</div>
+    </div>`;
+}
+
+// --- Event Handlers ---
 
 function attachEvents() {
-    // Navigation
+    // 1. Navigation
     const backBtn = document.getElementById('nav-back');
-    if (backBtn) backBtn.onclick = () => { state.activeView = 'dashboard'; render(); };
+    if (backBtn) backBtn.addEventListener('click', () => { state.activeView = 'dashboard'; render(); });
 
     const createBtn = document.getElementById('btn-create');
-    if (createBtn) createBtn.onclick = createList;
+    if (createBtn) createBtn.addEventListener('click', createList);
 
-    const aiBtn = document.getElementById('btn-ai');
-    if (aiBtn) aiBtn.onclick = handleAiExtract;
+    const getStartedBtn = document.getElementById('btn-get-started');
+    if (getStartedBtn) getStartedBtn.addEventListener('click', createList);
 
-    const smartFillBtn = document.getElementById('btn-smart-fill');
-    if (smartFillBtn) smartFillBtn.onclick = handleSmartFill;
+    const settingsBtn = document.getElementById('btn-settings');
+    if (settingsBtn) settingsBtn.addEventListener('click', () => { state.activeView = 'settings'; render(); });
 
-    // Form
-    const form = document.getElementById('add-word-form');
-    if (form) {
-        form.onsubmit = (e) => {
+    const refreshBtn = document.getElementById('btn-refresh');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+             notifyContentScript();
+             // Visual feedback
+             const originalIcon = refreshBtn.innerHTML;
+             refreshBtn.innerHTML = ICONS.check;
+             setTimeout(() => refreshBtn.innerHTML = originalIcon, 1500);
+        });
+    }
+
+    // 2. Dashboard List Items
+    const searchToggle = document.getElementById('btn-toggle-search');
+    if (searchToggle) {
+        searchToggle.addEventListener('click', () => {
+            state.searchVisible = !state.searchVisible;
+            render();
+            if (state.searchVisible) {
+                setTimeout(() => document.getElementById('input-search')?.focus(), 50);
+            }
+        });
+    }
+
+    const searchInput = document.getElementById('input-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            state.searchQuery = e.target.value;
+            render();
+            // Refocus after render
+            const input = document.getElementById('input-search');
+            if(input) {
+                input.focus(); 
+                input.setSelectionRange(input.value.length, input.value.length);
+            }
+        });
+    }
+
+    const listContainer = document.querySelector('.list-container');
+    if (listContainer) {
+        listContainer.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const id = target.dataset.id;
+            
+            if (action === 'edit') {
+                state.editingListId = id;
+                state.activeView = 'editor';
+                render();
+            } else if (action === 'toggle') {
+                e.stopPropagation();
+                const l = state.config.lists.find(x => x.id === id);
+                if(l) { l.enabled = !l.enabled; save(); }
+            } else if (action === 'delete') {
+                e.stopPropagation();
+                state.config.lists = state.config.lists.filter(l => l.id !== id);
+                save();
+            }
+        });
+
+        // Drag and Drop Logic
+        let draggedItem = null;
+        let draggedId = null;
+
+        listContainer.addEventListener('dragstart', (e) => {
+            const item = e.target.closest('.list-item');
+            if (item) {
+                draggedItem = item;
+                draggedId = item.dataset.id;
+                e.dataTransfer.effectAllowed = 'move';
+                item.style.opacity = '0.5';
+            }
+        });
+
+        listContainer.addEventListener('dragend', (e) => {
+            if (draggedItem) {
+                draggedItem.style.opacity = '1';
+                draggedItem = null;
+                draggedId = null;
+                
+                // Persist new order
+                const newOrderIds = Array.from(listContainer.querySelectorAll('.list-item')).map(el => el.dataset.id);
+                // Reorder config.lists based on newOrderIds
+                const reorderedLists = [];
+                newOrderIds.forEach(id => {
+                    const l = state.config.lists.find(x => x.id === id);
+                    if (l) reorderedLists.push(l);
+                });
+                // Add any missing ones (filtered out?) back to end
+                state.config.lists.forEach(l => {
+                    if (!newOrderIds.includes(l.id)) reorderedLists.push(l);
+                });
+                
+                state.config.lists = reorderedLists;
+                save();
+            }
+        });
+
+        listContainer.addEventListener('dragover', (e) => {
             e.preventDefault();
-            const input = document.getElementById('new-word-input');
-            const val = input.value.trim();
-            if (val) {
-                const list = state.lists.find(l => l.id === state.editingListId);
-                if (list) {
-                    list.words.push(val);
-                    input.value = '';
-                    save();
+            const afterElement = getDragAfterElement(listContainer, e.clientY);
+            const draggable = document.querySelector('.list-item[style*="opacity: 0.5"]'); // Current dragged item
+            if (draggable) {
+                if (afterElement == null) {
+                    listContainer.appendChild(draggable);
+                } else {
+                    listContainer.insertBefore(draggable, afterElement);
                 }
             }
-        };
+        });
     }
+
+    // 3. Editor Interactions
+    if (state.activeView === 'editor') {
+        const list = state.config.lists.find(l => l.id === state.editingListId);
+        if (!list) return;
+
+        const nameInput = document.getElementById('input-name');
+        if (nameInput) {
+            // Update state on input to keep it fresh in memory
+            nameInput.addEventListener('input', (e) => { list.name = e.target.value; });
+            // Save and re-render only when done editing (blur/enter)
+            nameInput.addEventListener('change', () => { save(); });
+        }
+
+        document.querySelectorAll('.option-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const key = card.dataset.key;
+                list.options[key] = !list.options[key];
+                save();
+            });
+        });
+        
+        const bgPicker = document.getElementById('custom-bg-picker');
+        if (bgPicker) {
+            bgPicker.addEventListener('input', (e) => {
+                list.styles.backgroundColor = e.target.value;
+                // Live update preview if needed, but save triggers render
+                save();
+            });
+        }
+        
+        const textPicker = document.getElementById('custom-text-picker');
+        if (textPicker) {
+            textPicker.addEventListener('input', (e) => {
+                list.styles.color = e.target.value;
+                save();
+            });
+        }
+
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                list.styles = { backgroundColor: btn.dataset.bg, color: btn.dataset.text };
+                save();
+            });
+        });
+
+        document.querySelectorAll('[data-action="removeWord"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                list.words = list.words.filter(w => w !== btn.dataset.word);
+                save();
+            });
+        });
+
+        const clearBtn = document.getElementById('btn-clear-words');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to remove all keywords from this list?')) {
+                    list.words = [];
+                    save();
+                }
+            });
+        }
+
+        const form = document.getElementById('add-word-form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('new-word-input');
+                const val = input.value.trim();
+                if (val && !list.words.includes(val)) {
+                    list.words.push(val);
+                    save();
+                } else {
+                    input.value = ''; 
+                }
+            });
+        }
+        
+        const newInput = document.getElementById('new-word-input');
+        if (newInput) {
+            // Regex Validation
+            newInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const btn = document.getElementById('btn-add-word');
+                const errorMsg = document.getElementById('regex-error-msg');
+                
+                if (list.options.isRegex && val) {
+                    try {
+                        new RegExp(val);
+                        newInput.classList.remove('invalid');
+                        if(btn) btn.disabled = false;
+                        if(errorMsg) errorMsg.style.display = 'none';
+                    } catch (err) {
+                        newInput.classList.add('invalid');
+                        if(btn) btn.disabled = true;
+                        if(errorMsg) errorMsg.style.display = 'block';
+                        if(errorMsg) errorMsg.textContent = "Invalid Regex: " + err.message.split(':')[1] || "Syntax Error";
+                    }
+                } else {
+                    newInput.classList.remove('invalid');
+                    if(btn) btn.disabled = false;
+                    if(errorMsg) errorMsg.style.display = 'none';
+                }
+            });
+
+            newInput.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const lines = paste.split(/\r\n|\r|\n/);
+                let added = false;
+                
+                lines.forEach(line => {
+                    const val = line.trim();
+                    if (!val) return;
+
+                    // Case-Insensitive check
+                    let exists = false;
+                    if (!list.options.caseSensitive) {
+                        exists = list.words.some(w => w.toLowerCase() === val.toLowerCase());
+                    } else {
+                        exists = list.words.includes(val);
+                    }
+
+                    if (!exists) {
+                        list.words.push(val);
+                        added = true;
+                    }
+                });
+                
+                if (added) {
+                    save();
+                }
+            });
+        }
+    }
+
+    // 4. Settings View Interactions
+    if (state.activeView === 'settings') {
+        const globalToggle = document.getElementById('setting-global-toggle');
+        if (globalToggle) {
+            globalToggle.addEventListener('click', () => {
+                state.config.settings.globalEnabled = !state.config.settings.globalEnabled;
+                save();
+            });
+        }
+
+        const perfToggle = document.getElementById('setting-perf-toggle');
+        if (perfToggle) {
+            perfToggle.addEventListener('click', () => {
+                state.config.settings.performanceMode = !state.config.settings.performanceMode;
+                save();
+            });
+        }
+
+        const excludedArea = document.getElementById('setting-excluded');
+        if (excludedArea) {
+            excludedArea.addEventListener('change', (e) => {
+                const lines = e.target.value.split('\n').map(s => s.trim()).filter(s => s);
+                state.config.settings.excludedDomains = lines;
+                save();
+            });
+        }
+
+        const exportBtn = document.getElementById('btn-export');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                const blob = new Blob([JSON.stringify(state.config, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `highlight-pro-backup-${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        const importTrigger = document.getElementById('btn-import-trigger');
+        const fileInput = document.getElementById('file-import');
+        if (importTrigger && fileInput) {
+            importTrigger.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const imported = JSON.parse(evt.target.result);
+                        if (imported.lists && Array.isArray(imported.lists)) {
+                            // Merge strategy: Overwrite config entirely or merge lists?
+                            // Let's replace for simplicity and predictability
+                            state.config = imported;
+                            // Ensure structure integrity
+                            if(!state.config.settings) {
+                                // Clone default settings to avoid mutating the constant
+                                state.config.settings = JSON.parse(JSON.stringify(DEFAULT_CONFIG.settings));
+                            }
+                            save();
+                            showToast('Rules imported successfully!', 'success');
+                        } else {
+                            showToast('Invalid JSON format.', 'error');
+                        }
+                    } catch (err) {
+                        showToast('Error parsing JSON.', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+    }
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Icon based on type
+    let icon = ICONS.check;
+    if (type === 'error') icon = ICONS.alert;
+    
+    toast.innerHTML = `<div style="flex-shrink:0;">${icon}</div><div>${message}</div>`;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        toast.addEventListener('animationend', () => toast.remove());
+    }, 3000);
+}
+
+function confirmAction(message, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    
+    overlay.innerHTML = `
+        <div class="modal">
+            <h3 style="margin: 0 0 0.5rem; font-size: 1.1rem;">Confirm Action</h3>
+            <p style="margin: 0 0 1.5rem; color: var(--text-muted); font-size: 0.9rem;">${message}</p>
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="modal-confirm" class="btn btn-primary" style="background: var(--danger);">Confirm</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Focus management could be added here
+    
+    document.getElementById('modal-cancel').addEventListener('click', () => overlay.remove());
+    document.getElementById('modal-confirm').addEventListener('click', () => {
+        onConfirm();
+        overlay.remove();
+    });
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.list-item:not([style*="opacity: 0.5"])')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
 function createList() {
     const newList = {
         id: crypto.randomUUID(),
-        name: 'New List',
+        name: 'New Rule',
         words: [],
-        styles: { backgroundColor: '#4f46e5', color: '#ffffff' },
+        styles: { backgroundColor: '#6610f2', color: '#ffffff' },
         enabled: true,
         options: { caseSensitive: false, wholeWord: true, isRegex: false }
     };
-    state.lists.push(newList);
+    state.config.lists.push(newList);
+    state.lastCreatedId = newList.id; // Mark for animation
     state.editingListId = newList.id;
     state.activeView = 'editor';
     save();
 }
-
-function handleAiExtract() {
-    state.isExtracting = true;
-    render();
-    callGemini("Analyze common web patterns and suggest 5 high-value technical keywords. Return ONLY a comma-separated list.").then(text => {
-        state.isExtracting = false;
-        if (text) {
-            const words = text.split(',').map(w => w.trim()).filter(w => w);
-            state.lists.push({
-                id: crypto.randomUUID(),
-                name: '✨ AI Suggested',
-                words: words,
-                styles: { backgroundColor: '#8b5cf6', color: '#ffffff' },
-                enabled: true,
-                options: { caseSensitive: false, wholeWord: true, isRegex: false }
-            });
-            save();
-        } else {
-            render();
-        }
-    });
-}
-
-function handleSmartFill() {
-    const list = state.lists.find(l => l.id === state.editingListId);
-    if (!list) return;
-    
-    state.isExtracting = true;
-    render();
-    const prompt = `Based on the list title "${list.name}" and existing words [${list.words.join(', ')}], suggest 5 more relevant words. Return ONLY comma-separated list.`;
-    
-    callGemini(prompt).then(text => {
-        state.isExtracting = false;
-        if (text) {
-            const words = text.split(',').map(w => w.trim()).filter(w => w);
-            list.words = [...new Set([...list.words, ...words])];
-            save();
-        } else {
-            render();
-        }
-    });
-}
-
-// Exposed globally for HTML onclick attributes
-window.editList = (id) => { state.editingListId = id; state.activeView = 'editor'; render(); };
-window.deleteList = (id) => { state.lists = state.lists.filter(l => l.id !== id); save(); };
-window.toggleList = (id) => { const l = state.lists.find(x => x.id === id); if(l) { l.enabled = !l.enabled; save(); } };
-window.updateListProperty = (key, val) => { const l = state.lists.find(x => x.id === state.editingListId); if(l) { l[key] = val; save(); } };
-window.updateListStyle = (bg, txt) => { const l = state.lists.find(x => x.id === state.editingListId); if(l) { l.styles = { backgroundColor: bg, color: txt }; save(); } };
-window.toggleListOption = (key) => { const l = state.lists.find(x => x.id === state.editingListId); if(l) { l.options[key] = !l.options[key]; save(); } };
-window.removeWord = (w) => { const l = state.lists.find(x => x.id === state.editingListId); if(l) { l.words = l.words.filter(word => word !== w); save(); } };
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
