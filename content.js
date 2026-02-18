@@ -19,11 +19,20 @@ function debounce(func, wait) {
 }
 
 function applyHighlights() {
-    chrome.storage.sync.get([STORAGE_KEY], (result) => {
-        const config = result[STORAGE_KEY];
-        if (!config) return;
+    if (!chrome.runtime?.id) {
+        // Extension context invalidated
+        if (observer) observer.disconnect();
+        return;
+    }
 
-        // 1. Check Global Enable
+    try {
+        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+            if (chrome.runtime.lastError) return; // Handle potential error
+
+            const config = result[STORAGE_KEY];
+            if (!config) return;
+
+            // 1. Check Global Enable
         if (config.settings && config.settings.globalEnabled === false) {
             removeAllHighlights();
             updateBadge(0);
@@ -145,9 +154,13 @@ function applyHighlights() {
             }
         });
 
-        // Update Badge Count
-        updateBadge(document.querySelectorAll('mark.highlight-pro-ext').length);
-    });
+            // Update Badge Count
+            updateBadge(document.querySelectorAll('mark.highlight-pro-ext').length);
+        });
+    } catch (e) {
+        console.log("Highlight Pro: Extension context invalidated.");
+        if (observer) observer.disconnect();
+    }
 }
 
 function removeAllHighlights() {
@@ -161,18 +174,23 @@ function removeAllHighlights() {
 }
 
 function updateBadge(count) {
-    chrome.runtime.sendMessage({
-        action: "update_badge",
-        count: count
-    }, () => { if(chrome.runtime.lastError){ /* ignore */ } });
+    if (!chrome.runtime?.id) return;
+    try {
+        chrome.runtime.sendMessage({
+            action: "update_badge",
+            count: count
+        }, () => { if(chrome.runtime.lastError){ /* ignore */ } });
+    } catch (e) { /* context invalid */ }
 }
 
 // Listen for updates
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "refresh_highlights") {
-        applyHighlights();
-    }
-});
+try {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "refresh_highlights") {
+            applyHighlights();
+        }
+    });
+} catch (e) { /* context invalid */ }
 
 // Run on load
 if (document.readyState === 'loading') {
