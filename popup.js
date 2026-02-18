@@ -13,7 +13,10 @@ const ICONS = {
     eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
     download: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
     upload: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`,
-    check: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+    check: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+    search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+    grip: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>`,
+    alert: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`
 };
 
 const PRESETS = [
@@ -47,7 +50,9 @@ const DEFAULT_CONFIG = {
 let state = {
     config: DEFAULT_CONFIG,
     activeView: 'dashboard', // 'dashboard' | 'editor' | 'settings'
-    editingListId: null
+    editingListId: null,
+    searchQuery: '',
+    searchVisible: false
 };
 
 // --- App Logic ---
@@ -155,9 +160,36 @@ function render() {
 // --- HTML Generators ---
 
 function renderDashboardHtml() {
-    const lists = state.config.lists;
+    let lists = state.config.lists;
 
-    if (lists.length === 0) {
+    // Filter by search
+    if (state.searchQuery) {
+        const query = state.searchQuery.toLowerCase();
+        lists = lists.filter(l =>
+            l.name.toLowerCase().includes(query) ||
+            l.words.some(w => w.toLowerCase().includes(query))
+        );
+    }
+
+    // Storage Usage Check
+    const storageUsage = new Blob([JSON.stringify(state.config)]).size;
+    const quotaBytes = 102400; // chrome.storage.sync.QUOTA_BYTES
+    const usagePercent = (storageUsage / quotaBytes) * 100;
+    const isOverLimit = usagePercent > 90;
+
+    let alertHtml = '';
+    if (isOverLimit) {
+        alertHtml = `
+        <div style="margin: 0 1.5rem 1rem; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); border-radius: 0.75rem; padding: 0.75rem; display: flex; align-items: center; gap: 0.75rem; color: var(--danger); font-size: 0.8rem;">
+            ${ICONS.alert}
+            <div>
+                <strong>Storage Warning</strong><br>
+                You are using ${usagePercent.toFixed(1)}% of your sync quota. Consider removing some rules.
+            </div>
+        </div>`;
+    }
+
+    if (state.config.lists.length === 0) {
         return `
         <div class="dashboard-header">
             <div>
@@ -174,14 +206,20 @@ function renderDashboardHtml() {
         </div>`;
     }
 
-    const listsHtml = lists.map(list => `
-        <div class="list-item" data-id="${list.id}">
+    const listsHtml = lists.map((list, index) => `
+        <div class="list-item" data-id="${list.id}" draggable="true">
+            <div class="drag-handle" style="cursor: grab; color: var(--text-muted); opacity: 0.5; padding: 0.5rem;">
+                ${ICONS.grip}
+            </div>
             <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" data-action="toggle" data-id="${list.id}">
                 <div class="toggle-dot"></div>
             </div>
 
             <div class="list-content" style="flex: 1; min-width: 0; padding: 0 0.5rem;" data-action="edit" data-id="${list.id}">
-                <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">${list.name}</div>
+                <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">
+                    ${list.name}
+                    ${state.searchQuery ? `<span style="font-size: 0.7rem; color: var(--accent); margin-left: 0.5rem;">(matches found)</span>` : ''}
+                </div>
                 <div class="flex items-center gap-2" style="margin-top: 0.35rem;">
                     <div style="width: 6px; height: 6px; border-radius: 50%; background-color: ${list.styles.backgroundColor}; box-shadow: 0 0 6px ${list.styles.backgroundColor};"></div>
                     <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">${list.words.length} KEYWORDS</span>
@@ -196,12 +234,21 @@ function renderDashboardHtml() {
 
     return `
     <div class="dashboard-header">
-        <div>
-            <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">${lists.length} active rules</p>
+        <div style="flex: 1; display: flex; align-items: center; gap: 1rem;">
+            <div>
+                <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">${lists.length} / ${state.config.lists.length} rules</p>
+            </div>
+            <div style="position: relative;">
+                <button id="btn-toggle-search" class="btn btn-icon" title="Search">${ICONS.search}</button>
+                <div id="search-container" style="display: ${state.searchVisible ? 'block' : 'none'}; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 0.5rem; width: 150px; background: var(--bg-glass); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.25rem;">
+                    <input type="text" id="input-search" value="${state.searchQuery}" placeholder="Search..." style="width: 100%; background: transparent; border: none; color: white; font-size: 0.8rem; padding: 0.25rem; outline: none;">
+                </div>
+            </div>
         </div>
         <button id="btn-create" class="btn btn-primary">${ICONS.plus} New</button>
     </div>
+    ${alertHtml}
     <div class="list-container">${listsHtml}</div>`;
 }
 
@@ -375,6 +422,31 @@ function attachEvents() {
     }
 
     // 2. Dashboard List Items
+    const searchToggle = document.getElementById('btn-toggle-search');
+    if (searchToggle) {
+        searchToggle.addEventListener('click', () => {
+            state.searchVisible = !state.searchVisible;
+            render();
+            if (state.searchVisible) {
+                setTimeout(() => document.getElementById('input-search')?.focus(), 50);
+            }
+        });
+    }
+
+    const searchInput = document.getElementById('input-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            state.searchQuery = e.target.value;
+            render();
+            // Refocus after render
+            const input = document.getElementById('input-search');
+            if(input) {
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+            }
+        });
+    }
+
     const listContainer = document.querySelector('.list-container');
     if (listContainer) {
         listContainer.addEventListener('click', (e) => {
@@ -396,6 +468,57 @@ function attachEvents() {
                 e.stopPropagation();
                 state.config.lists = state.config.lists.filter(l => l.id !== id);
                 save();
+            }
+        });
+
+        // Drag and Drop Logic
+        let draggedItem = null;
+        let draggedId = null;
+
+        listContainer.addEventListener('dragstart', (e) => {
+            const item = e.target.closest('.list-item');
+            if (item) {
+                draggedItem = item;
+                draggedId = item.dataset.id;
+                e.dataTransfer.effectAllowed = 'move';
+                item.style.opacity = '0.5';
+            }
+        });
+
+        listContainer.addEventListener('dragend', (e) => {
+            if (draggedItem) {
+                draggedItem.style.opacity = '1';
+                draggedItem = null;
+                draggedId = null;
+
+                // Persist new order
+                const newOrderIds = Array.from(listContainer.querySelectorAll('.list-item')).map(el => el.dataset.id);
+                // Reorder config.lists based on newOrderIds
+                const reorderedLists = [];
+                newOrderIds.forEach(id => {
+                    const l = state.config.lists.find(x => x.id === id);
+                    if (l) reorderedLists.push(l);
+                });
+                // Add any missing ones (filtered out?) back to end
+                state.config.lists.forEach(l => {
+                    if (!newOrderIds.includes(l.id)) reorderedLists.push(l);
+                });
+
+                state.config.lists = reorderedLists;
+                save();
+            }
+        });
+
+        listContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(listContainer, e.clientY);
+            const draggable = document.querySelector('.list-item[style*="opacity: 0.5"]'); // Current dragged item
+            if (draggable) {
+                if (afterElement == null) {
+                    listContainer.appendChild(draggable);
+                } else {
+                    listContainer.insertBefore(draggable, afterElement);
+                }
             }
         });
     }
@@ -609,6 +732,20 @@ function attachEvents() {
             });
         }
     }
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.list-item:not([style*="opacity: 0.5"])')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
 function createList() {
