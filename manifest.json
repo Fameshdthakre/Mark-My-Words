@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Highlight Pro",
-  "version": "1.0.0",
+  "name": "Mark My Words",
+  "version": "1.1.0",
   "description": "Smart, modern text highlighting with customizable styles.",
   "permissions": [
     "storage",
@@ -15,7 +15,7 @@
   "host_permissions": [],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Highlight Pro",
+    "default_title": "Mark My Words",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

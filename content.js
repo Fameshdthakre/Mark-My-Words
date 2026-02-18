@@ -27,6 +27,7 @@ function applyHighlights() {
 
     try {
         chrome.storage.sync.get([STORAGE_KEY], (result) => {
+            if (!chrome.runtime?.id) return; // Check context validity again inside callback
             if (chrome.runtime.lastError) return; // Handle potential error
 
             const config = result[STORAGE_KEY];

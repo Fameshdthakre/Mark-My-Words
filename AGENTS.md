@@ -1,10 +1,10 @@
-# Highlight Pro - Developer Guide & Agent Instructions
+# Mark My Words - Developer Guide & Agent Instructions
 
-This document outlines the architecture, coding patterns, and guidelines for maintaining and extending the "Highlight Pro" Chrome Extension (Manifest V3).
+This document outlines the architecture, coding patterns, and guidelines for maintaining and extending the "Mark My Words" Chrome Extension (Manifest V3).
 
 ## 1. Project Overview
 
-**Highlight Pro** is a modern text highlighting extension that allows users to create custom highlight rules (color-coded lists of keywords or regex patterns) and apply them across web pages.
+**Mark My Words** is a modern text highlighting extension that allows users to create custom highlight rules (color-coded lists of keywords or regex patterns) and apply them across web pages.
 
 ### Key Characteristics
 *   **Theme:** "Electric Indigo" (`#6d28d9` primary) with **Glassmorphism** effects (blur, translucency, neon accents).

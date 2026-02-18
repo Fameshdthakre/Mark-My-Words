@@ -2,13 +2,13 @@
 
 ## Description
 
-**Highlight Pro: The Ultimate Smart Text Highlighter for Chrome**
+**Mark My Words: The Ultimate Smart Text Highlighter for Chrome**
 
-Transform your browsing experience with Highlight Pro, the modern, privacy-focused extension that automatically highlights important keywords and phrases across the web. Whether you're researching, studying, or monitoring data, Highlight Pro ensures you never miss a critical detail.
+Transform your browsing experience with Mark My Words, the modern, privacy-focused extension that automatically highlights important keywords and phrases across the web. Whether you're researching, studying, or monitoring data, Mark My Words ensures you never miss a critical detail.
 
 **⚡ Key Features:**
 
-*   **Smart & Automatic Highlighting:** Define your rules once, and let Highlight Pro scan every page you visit.
+*   **Smart & Automatic Highlighting:** Define your rules once, and let Mark My Words scan every page you visit.
 *   **Electric Indigo Theme:** A beautiful, modern interface designed with Glassmorphism for a premium look and feel.
 *   **Powerful Matching:** Supports simple keywords, case-sensitive matching, whole words, and advanced **Regular Expressions (Regex)**.
 *   **Context Menu Integration:** Simply select text, right-click, and add it to any of your highlight lists instantly.
