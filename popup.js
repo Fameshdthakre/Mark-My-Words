@@ -64,7 +64,13 @@ function init() {
         chrome.storage.sync.get([STORAGE_KEY], (result) => {
             if (result[STORAGE_KEY]) {
                 state.config = result[STORAGE_KEY];
-                render();
+                // Config loaded, ensure presets exist (migration for existing V4 users)
+                if (!state.config.presets) {
+                    state.config.presets = [...PRESETS];
+                    save();
+                } else {
+                    render();
+                }
             } else {
                 // If sync is empty, check LOCAL for migration
                 chrome.storage.local.get(['highlighter_lists_v3'], (localResult) => {
@@ -80,13 +86,6 @@ function init() {
                         save();
                     }
                 });
-            } else {
-                // Config loaded, ensure presets exist (migration for existing V4 users)
-                if (!state.config.presets) {
-                    state.config.presets = [...PRESETS];
-                    save();
-                }
-                render();
             }
         });
     } else {
