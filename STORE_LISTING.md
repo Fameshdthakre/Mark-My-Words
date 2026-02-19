@@ -30,22 +30,19 @@ Transform your browsing experience with Mark My Words, the modern, privacy-focus
 
 ---
 
-## Privacy Tab Justification
-
-**Permission:** `<all_urls>` (Access to all websites)
-
-**Justification:**
-"This extension requires access to all pages to automatically scan the DOM and highlight user-defined keywords (such as specific technical terms or names) without requiring the user to manually click the extension icon on every page load. The core functionality is 'set and forget' highlighting across the user's browsing session."
+## Privacy Tab Justification (Permissions)
 
 **Permission:** `storage`
+**Justification:** "Required to store the user's custom highlight rules, color preferences, and application settings locally. This allows the extension to remember the user's configuration across browser sessions and sync it between their devices."
 
-**Justification:**
-"Used to save the user's highlight rules and settings locally and sync them across their signed-in devices via Chrome Sync."
+**Permission:** `activeTab`
+**Justification:** "Required to interact with the currently active tab when the user clicks the extension icon or uses a context menu action, ensuring immediate feedback (like adding a keyword) is reflected on the current page."
 
 **Permission:** `contextMenus`
+**Justification:** "Required to add the 'Add to Highlight List' option to the browser's right-click context menu. This allows users to simply select text on a webpage and add it to their highlight rules without opening the extension popup."
 
-**Justification:**
-"Allows users to select text on a webpage and quickly add it to a highlight list via the right-click menu."
+**Host Permission:** `http://*/*`, `https://*/*` (or `<all_urls>`)
+**Justification:** "The core functionality of 'Mark My Words' is to **automatically highlight** specific keywords defined by the user on **any webpage** they visit. Without access to read the content of all pages, the extension cannot scan for these keywords or apply the highlight styles automatically as the user browses."
 
 ---
 
