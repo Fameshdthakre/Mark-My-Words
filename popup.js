@@ -39,6 +39,7 @@ const DEFAULT_CONFIG = {
         enabled: true,
         options: { caseSensitive: false, wholeWord: true, isRegex: false }
     }],
+    presets: [...PRESETS], // Initialize with defaults
     settings: {
         globalEnabled: true,
         excludedDomains: [],
@@ -70,6 +71,8 @@ function init() {
                     if (localResult.highlighter_lists_v3) {
                         // Migrate V3 lists to V4 config
                         state.config.lists = localResult.highlighter_lists_v3;
+                        // Ensure presets exist
+                        if (!state.config.presets) state.config.presets = [...PRESETS];
                         save(); // This will save to sync
                     } else {
                         // No data anywhere, use defaults
@@ -77,6 +80,13 @@ function init() {
                         save();
                     }
                 });
+            } else {
+                // Config loaded, ensure presets exist (migration for existing V4 users)
+                if (!state.config.presets) {
+                    state.config.presets = [...PRESETS];
+                    save();
+                }
+                render();
             }
         });
     } else {
@@ -159,6 +169,9 @@ function render() {
             ${mainHtml}
         </main>
         ${previewHtml}
+        <div class="signature">
+            <div class="brand-line">Created with ❤️ by <strong>TransFamesh</strong>.</div>
+        </div>
     `;
 
     attachEvents();
@@ -302,16 +315,16 @@ function renderEditorHtml() {
         <div class="input-group">
             <label class="label">Highlight Style</label>
             <div class="color-picker-row" style="flex-wrap: wrap; gap: 0.5rem;">
-                ${PRESETS.map(p => {
+                ${(state.config.presets || PRESETS).map(p => {
                     const isActive = list.styles.backgroundColor === p.bg;
                     const style = isActive
                         ? `background-color: ${p.bg}; color: ${p.text}; box-shadow: 0 0 0 2px white, 0 0 10px ${p.bg}; transform: scale(1.1);`
                         : `background-color: ${p.bg}; color: ${p.text};`;
-                    return `<button class="color-btn" style="${style}" data-action="setColor" data-bg="${p.bg}" data-text="${p.text}">Aa</button>`;
+                    return `<button class="color-btn" style="${style}" data-action="setColor" data-bg="${p.bg}" data-text="${p.text}" title="${p.name || 'Custom'}">Aa</button>`;
                 }).join('')}
             </div>
 
-            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+            <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: flex-end;">
                 <div style="flex: 1;">
                     <label class="label" style="font-size: 0.75rem;">Background</label>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -324,6 +337,7 @@ function renderEditorHtml() {
                         <input type="color" id="custom-text-picker" value="${list.styles.color}" style="width: 100%; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
                     </div>
                 </div>
+                <button id="btn-save-style" class="btn btn-secondary" style="height: 36px; padding: 0 0.75rem;" title="Save Custom Style">${ICONS.plus}</button>
             </div>
         </div>
 
@@ -405,10 +419,10 @@ function renderSettingsHtml() {
 
 function renderPreviewHtml() {
     const list = state.activeView === 'editor' ? state.config.lists.find(l => l.id === state.editingListId) : null;
-    let sampleText = "Preview: Highlight Pro makes it easy to style your web.";
+    let sampleText = "Preview: Mark My Words makes it easy to style your web.";
 
     if (list) {
-         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Highlight Pro</span>`;
+         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Mark My Words</span>`;
          sampleText = `Preview: ${hl} makes it easy to style your web.`;
     }
 
@@ -585,6 +599,29 @@ function attachEvents() {
             textPicker.addEventListener('input', (e) => {
                 list.styles.color = e.target.value;
                 save();
+            });
+        }
+
+        const saveStyleBtn = document.getElementById('btn-save-style');
+        if (saveStyleBtn) {
+            saveStyleBtn.addEventListener('click', () => {
+                const currentBg = list.styles.backgroundColor;
+                const currentText = list.styles.color;
+
+                // Check for duplicates
+                const exists = state.config.presets.some(p => p.bg === currentBg && p.text === currentText);
+
+                if (!exists) {
+                    state.config.presets.push({
+                        bg: currentBg,
+                        text: currentText,
+                        name: 'Custom'
+                    });
+                    save();
+                    showToast('Style saved to presets!', 'success');
+                } else {
+                    showToast('Style already in presets.', 'info');
+                }
             });
         }
 

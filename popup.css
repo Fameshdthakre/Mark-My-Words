@@ -507,3 +507,21 @@ header {
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Footer Signature */
+.signature {
+    text-align: center;
+    padding: 1.5rem 0 1rem;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    opacity: 0.6;
+}
+
+.brand-line {
+    font-weight: 400;
+}
+
+.brand-line strong {
+    font-weight: 600;
+    color: var(--text-main);
+}
