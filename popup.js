@@ -87,14 +87,14 @@ function init() {
     }
 }
 
-function save() {
+function save(shouldRender = true) {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
         chrome.storage.sync.set({ [STORAGE_KEY]: state.config }, () => {
             notifyContentScript();
         });
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config));
-    render();
+    if (shouldRender) render();
 }
 
 function notifyContentScript() {
@@ -598,8 +598,7 @@ function attachEvents() {
         document.querySelectorAll('[data-action="removeWord"]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                list.words = list.words.filter(w => w !== btn.dataset.word);
-                save();
+                handleRemoveWord(list, btn.dataset.word, btn.closest('.tag'));
             });
         });
 
@@ -621,7 +620,35 @@ function attachEvents() {
                 const val = input.value.trim();
                 if (val && !list.words.includes(val)) {
                     list.words.push(val);
-                    save();
+
+                    // Manual DOM Update to avoid shaking
+                    const container = document.querySelector('.tag-container');
+                    // Remove "No keywords" placeholder if it exists
+                    if (list.words.length === 1) {
+                         const placeholder = container.querySelector('span[style*="font-style: italic"]');
+                         if(placeholder) placeholder.remove();
+                    }
+
+                    const temp = document.createElement('div');
+                    temp.innerHTML = `
+                    <span class="tag" style="background-color: ${list.styles.backgroundColor}20; color: white; border: 1px solid ${list.styles.backgroundColor}60;">
+                        ${val} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" data-action="removeWord" data-word="${val}">${ICONS.x}</span>
+                    </span>`;
+                    const newTag = temp.firstElementChild;
+
+                    // Attach delete event
+                    const delBtn = newTag.querySelector('[data-action="removeWord"]');
+                    if (delBtn) {
+                        delBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            handleRemoveWord(list, val, newTag);
+                        });
+                    }
+
+                    container.appendChild(newTag);
+                    input.value = '';
+
+                    save(false); // Skip render
                 } else {
                     input.value = ''; 
                 }
@@ -818,6 +845,17 @@ function getDragAfterElement(container, y) {
             return closest;
         }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function handleRemoveWord(list, word, tagElement) {
+    list.words = list.words.filter(w => w !== word);
+    if (tagElement) tagElement.remove();
+
+    const container = document.querySelector('.tag-container');
+    if (container && list.words.length === 0) {
+            container.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No keywords added yet.</span>';
+    }
+    save(false);
 }
 
 function createList() {

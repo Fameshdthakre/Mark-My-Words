@@ -98,7 +98,7 @@ function applyHighlights() {
             let text = node.nodeValue;
             let rangesToHighlight = [];
 
-            lists.forEach(list => {
+            lists.forEach((list, index) => {
                 let patternSource;
                 try {
                     if (list.options.isRegex) {
@@ -119,38 +119,66 @@ function applyHighlights() {
                         rangesToHighlight.push({
                             start: match.index,
                             end: match.index + match[0].length,
-                            style: list.styles
+                            length: match[0].length,
+                            style: list.styles,
+                            priority: index // Lower index = Higher priority
                         });
                     }
                 } catch (e) { }
             });
 
             if (rangesToHighlight.length > 0) {
-                const range = rangesToHighlight[0]; // Simple first-match win
-                
-                const span = document.createElement('mark');
-                span.className = 'highlight-pro-ext';
-                
-                // Styles
-                span.style.backgroundColor = range.style.backgroundColor;
-                span.style.color = range.style.color;
-                span.style.borderRadius = '4px';
-                span.style.padding = '0 3px';
-                span.style.margin = '0 1px';
-                span.style.boxShadow = `0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px ${range.style.backgroundColor}40`;
-                span.style.fontInherit = 'true';
-                
-                span.textContent = text.substring(range.start, range.end);
+                // 1. Sort matches: Start Position -> Priority (List Order) -> Length
+                rangesToHighlight.sort((a, b) => {
+                    if (a.start !== b.start) return a.start - b.start;
+                    if (a.priority !== b.priority) return a.priority - b.priority;
+                    return b.length - a.length;
+                });
 
-                const afterText = text.substring(range.end);
-                const beforeText = text.substring(0, range.start);
-
-                const parent = node.parentNode;
-                if (beforeText) parent.insertBefore(document.createTextNode(beforeText), node);
-                parent.insertBefore(span, node);
-                if (afterText) parent.insertBefore(document.createTextNode(afterText), node);
+                // 2. Filter overlapping matches
+                const finalRanges = [];
+                let lastEnd = 0;
                 
-                parent.removeChild(node);
+                rangesToHighlight.forEach(r => {
+                    if (r.start >= lastEnd) {
+                        finalRanges.push(r);
+                        lastEnd = r.end;
+                    }
+                });
+
+                if (finalRanges.length > 0 && node.parentNode) {
+                    const fragment = document.createDocumentFragment();
+                    let cursor = 0;
+
+                    finalRanges.forEach(range => {
+                        // Append text before highlight
+                        if (range.start > cursor) {
+                            fragment.appendChild(document.createTextNode(text.substring(cursor, range.start)));
+                        }
+
+                        // Create highlight span
+                        const span = document.createElement('mark');
+                        span.className = 'highlight-pro-ext';
+                        span.style.backgroundColor = range.style.backgroundColor;
+                        span.style.color = range.style.color;
+                        span.style.borderRadius = '4px';
+                        span.style.padding = '0 3px';
+                        span.style.margin = '0 1px';
+                        span.style.boxShadow = `0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px ${range.style.backgroundColor}40`;
+                        span.style.fontInherit = 'true';
+                        span.textContent = text.substring(range.start, range.end);
+
+                        fragment.appendChild(span);
+                        cursor = range.end;
+                    });
+
+                    // Append remaining text
+                    if (cursor < text.length) {
+                        fragment.appendChild(document.createTextNode(text.substring(cursor)));
+                    }
+
+                    node.parentNode.replaceChild(fragment, node);
+                }
             }
         });
 
