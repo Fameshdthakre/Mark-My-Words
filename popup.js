@@ -124,7 +124,7 @@ function render() {
         <div class="flex items-center">
             <div class="logo-box">${ICONS.zap}</div>
             <div>
-                <h1 class="app-title">Highlight Pro</h1>
+                <h1 class="app-title">Mark My Words</h1>
                 <div class="status-badge">
                     <div class="status-dot" style="background-color: ${state.config.settings.globalEnabled ? 'var(--accent)' : 'var(--text-muted)'}"></div> 
                     ${state.config.settings.globalEnabled ? 'Active' : 'Paused'}
@@ -397,7 +397,7 @@ function renderSettingsHtml() {
         </div>
         
         <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
-            Highlighter Pro v1.1.0<br>
+            Mark My Words v1.1.0<br>
             Sync enabled
         </div>
     </div>`;
@@ -405,10 +405,10 @@ function renderSettingsHtml() {
 
 function renderPreviewHtml() {
     const list = state.activeView === 'editor' ? state.config.lists.find(l => l.id === state.editingListId) : null;
-    let sampleText = "Preview: Highlight Pro makes it easy to style your web.";
+    let sampleText = "Preview: Mark My Words makes it easy to style your web.";
     
     if (list) {
-         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Highlight Pro</span>`;
+         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Mark My Words</span>`;
          sampleText = `Preview: ${hl} makes it easy to style your web.`;
     }
 

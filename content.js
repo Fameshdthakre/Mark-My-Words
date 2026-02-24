@@ -56,7 +56,7 @@ function applyHighlights() {
         if (config.settings && config.settings.performanceMode) {
             // Rough check for page size
             if (document.body.innerText.length > 50000) {
-                console.log('Highlight Pro: Performance mode active. Skipping large page.');
+                console.log('Mark My Words: Performance mode active. Skipping large page.');
                 return;
             }
         }
@@ -186,7 +186,7 @@ function applyHighlights() {
             updateBadge(document.querySelectorAll('mark.highlight-pro-ext').length);
         });
     } catch (e) {
-        console.log("Highlight Pro: Extension context invalidated.");
+        console.log("Mark My Words: Extension context invalidated.");
         if (observer) observer.disconnect();
     }
 }
