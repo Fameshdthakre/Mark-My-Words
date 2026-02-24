@@ -560,14 +560,21 @@ function attachEvents() {
             // Update state on input to keep it fresh in memory
             nameInput.addEventListener('input', (e) => { list.name = e.target.value; });
             // Save and re-render only when done editing (blur/enter)
-            nameInput.addEventListener('change', () => { save(); });
+            nameInput.addEventListener('change', () => { save(false); });
         }
 
         document.querySelectorAll('.option-card').forEach(card => {
             card.addEventListener('click', () => {
                 const key = card.dataset.key;
                 list.options[key] = !list.options[key];
-                save();
+
+                // Manual UI update
+                if (list.options[key]) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+                save(false);
             });
         });
         
@@ -575,8 +582,24 @@ function attachEvents() {
         if (bgPicker) {
             bgPicker.addEventListener('input', (e) => {
                 list.styles.backgroundColor = e.target.value;
-                // Live update preview if needed, but save triggers render
-                save();
+
+                // Manual Preview Update
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) {
+                    previewSpan.style.backgroundColor = list.styles.backgroundColor;
+                    // Also update box-shadow for effect
+                    previewSpan.style.boxShadow = `0 2px 4px rgba(0,0,0,0.2), 0 0 0 1px ${list.styles.backgroundColor}40`;
+                }
+
+                // Also update the color preset buttons if they match? No, custom overrides.
+                // Just remove 'active' styling from presets maybe?
+                document.querySelectorAll('.color-btn').forEach(btn => {
+                     // Reset scale/box-shadow
+                     btn.style.transform = '';
+                     btn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                });
+
+                save(false);
             });
         }
         
@@ -584,14 +607,46 @@ function attachEvents() {
         if (textPicker) {
             textPicker.addEventListener('input', (e) => {
                 list.styles.color = e.target.value;
-                save();
+
+                // Manual Preview Update
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) previewSpan.style.color = list.styles.color;
+
+                save(false);
             });
         }
 
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                list.styles = { backgroundColor: btn.dataset.bg, color: btn.dataset.text };
-                save();
+                const bg = btn.dataset.bg;
+                const text = btn.dataset.text;
+                list.styles = { backgroundColor: bg, color: text };
+
+                // Manual UI Update
+                // Update Pickers
+                if(bgPicker) bgPicker.value = bg;
+                if(textPicker) textPicker.value = text;
+
+                // Update Preview
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) {
+                    previewSpan.style.backgroundColor = bg;
+                    previewSpan.style.color = text;
+                    previewSpan.style.boxShadow = `0 2px 4px rgba(0,0,0,0.2), 0 0 0 1px ${bg}40`;
+                }
+
+                // Update Buttons Visual State
+                document.querySelectorAll('.color-btn').forEach(b => {
+                    if (b === btn) {
+                        b.style.boxShadow = `0 0 0 2px white, 0 0 10px ${bg}`;
+                        b.style.transform = 'scale(1.1)';
+                    } else {
+                        b.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                        b.style.transform = '';
+                    }
+                });
+
+                save(false);
             });
         });
 
@@ -719,7 +774,16 @@ function attachEvents() {
         if (globalToggle) {
             globalToggle.addEventListener('click', () => {
                 state.config.settings.globalEnabled = !state.config.settings.globalEnabled;
-                save();
+
+                // Manual UI Toggle
+                if (state.config.settings.globalEnabled) {
+                    globalToggle.classList.add('on');
+                    globalToggle.classList.remove('off');
+                } else {
+                    globalToggle.classList.add('off');
+                    globalToggle.classList.remove('on');
+                }
+                save(false);
             });
         }
 
@@ -727,7 +791,16 @@ function attachEvents() {
         if (perfToggle) {
             perfToggle.addEventListener('click', () => {
                 state.config.settings.performanceMode = !state.config.settings.performanceMode;
-                save();
+
+                // Manual UI Toggle
+                if (state.config.settings.performanceMode) {
+                    perfToggle.classList.add('on');
+                    perfToggle.classList.remove('off');
+                } else {
+                    perfToggle.classList.add('off');
+                    perfToggle.classList.remove('on');
+                }
+                save(false);
             });
         }
 
@@ -736,7 +809,7 @@ function attachEvents() {
             excludedArea.addEventListener('change', (e) => {
                 const lines = e.target.value.split('\n').map(s => s.trim()).filter(s => s);
                 state.config.settings.excludedDomains = lines;
-                save();
+                save(false); // No visual change needed on textarea
             });
         }
 
