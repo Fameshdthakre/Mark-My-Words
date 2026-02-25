@@ -55,6 +55,17 @@ let state = {
     searchVisible: false
 };
 
+// --- Helpers ---
+function escapeHtml(text) {
+    if (!text) return text;
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // --- App Logic ---
 
 function init() {
@@ -215,14 +226,7 @@ function renderDashboardHtml() {
         </div>`;
     }
 
-    const listsHtml = lists.map((list, index) => {
-        // Check if this item was just added (simple heuristic or state tracking could be better, but for now we assume new items are at end if created)
-        // Better: We rely on the fact that re-renders happen. 
-        // To make it specific, we could add a temporary 'isNew' flag in state, but simpler is just to not over-engineer for now.
-        // Let's just rely on CSS transitions for hover. For entry animation, we need a flag.
-        const isNew = list.isNew === true;
-        // Clean up flag after render (in a timeout or next cycle) - but state is immutable-ish here.
-        // We will just add the class if the ID matches state.lastCreatedId
+    const listsHtml = lists.map((list) => {
         const animationClass = (state.lastCreatedId === list.id) ? 'new-item' : '';
         
         return `
@@ -236,7 +240,7 @@ function renderDashboardHtml() {
             
             <div class="list-content" style="flex: 1; min-width: 0; padding: 0 0.5rem;" data-action="edit" data-id="${list.id}">
                 <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">
-                    ${list.name}
+                    ${escapeHtml(list.name)}
                     ${state.searchQuery ? `<span style="font-size: 0.7rem; color: var(--accent); margin-left: 0.5rem;">(matches found)</span>` : ''}
                 </div>
                 <div class="flex items-center gap-2" style="margin-top: 0.35rem;">
@@ -284,7 +288,7 @@ function renderEditorHtml() {
     <div class="editor-view">
         <div class="input-group">
             <label class="label">Rule Name</label>
-            <input type="text" id="input-name" class="title-input" value="${list.name}" placeholder="Enter rule name...">
+            <input type="text" id="input-name" class="title-input" value="${escapeHtml(list.name)}" placeholder="Enter rule name...">
         </div>
 
         <div class="options-grid">
@@ -343,7 +347,7 @@ function renderEditorHtml() {
             <div class="tag-container">
                 ${list.words.map(w => `
                     <span class="tag" style="background-color: ${list.styles.backgroundColor}20; color: white; border: 1px solid ${list.styles.backgroundColor}60;">
-                        ${w} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" data-action="removeWord" data-word="${w}">${ICONS.x}</span>
+                        ${escapeHtml(w)} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" data-action="removeWord" data-word="${escapeHtml(w)}">${ICONS.x}</span>
                     </span>
                 `).join('')}
                 ${list.words.length === 0 ? '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No keywords added yet.</span>' : ''}
@@ -500,13 +504,11 @@ function attachEvents() {
 
         // Drag and Drop Logic
         let draggedItem = null;
-        let draggedId = null;
 
         listContainer.addEventListener('dragstart', (e) => {
             const item = e.target.closest('.list-item');
             if (item) {
                 draggedItem = item;
-                draggedId = item.dataset.id;
                 e.dataTransfer.effectAllowed = 'move';
                 item.style.opacity = '0.5';
             }
@@ -516,7 +518,6 @@ function attachEvents() {
             if (draggedItem) {
                 draggedItem.style.opacity = '1';
                 draggedItem = null;
-                draggedId = null;
                 
                 // Persist new order
                 const newOrderIds = Array.from(listContainer.querySelectorAll('.list-item')).map(el => el.dataset.id);
@@ -591,8 +592,7 @@ function attachEvents() {
                     previewSpan.style.boxShadow = `0 2px 4px rgba(0,0,0,0.2), 0 0 0 1px ${list.styles.backgroundColor}40`;
                 }
 
-                // Also update the color preset buttons if they match? No, custom overrides.
-                // Just remove 'active' styling from presets maybe?
+                // Just remove 'active' styling from presets
                 document.querySelectorAll('.color-btn').forEach(btn => {
                      // Reset scale/box-shadow
                      btn.style.transform = '';
@@ -687,7 +687,7 @@ function attachEvents() {
                     const temp = document.createElement('div');
                     temp.innerHTML = `
                     <span class="tag" style="background-color: ${list.styles.backgroundColor}20; color: white; border: 1px solid ${list.styles.backgroundColor}60;">
-                        ${val} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" data-action="removeWord" data-word="${val}">${ICONS.x}</span>
+                        ${escapeHtml(val)} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" data-action="removeWord" data-word="${escapeHtml(val)}">${ICONS.x}</span>
                     </span>`;
                     const newTag = temp.firstElementChild;
 
@@ -838,12 +838,8 @@ function attachEvents() {
                     try {
                         const imported = JSON.parse(evt.target.result);
                         if (imported.lists && Array.isArray(imported.lists)) {
-                            // Merge strategy: Overwrite config entirely or merge lists?
-                            // Let's replace for simplicity and predictability
                             state.config = imported;
-                            // Ensure structure integrity
                             if(!state.config.settings) {
-                                // Clone default settings to avoid mutating the constant
                                 state.config.settings = JSON.parse(JSON.stringify(DEFAULT_CONFIG.settings));
                             }
                             save();
@@ -896,8 +892,6 @@ function confirmAction(message, onConfirm) {
     `;
     
     document.body.appendChild(overlay);
-    
-    // Focus management could be added here
     
     document.getElementById('modal-cancel').addEventListener('click', () => overlay.remove());
     document.getElementById('modal-confirm').addEventListener('click', () => {
