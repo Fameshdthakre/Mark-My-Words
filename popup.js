@@ -170,6 +170,9 @@ function render() {
             ${mainHtml}
         </main>
         ${previewHtml}
+        <div class="signature">
+            <div class="brand-line">Created with ❤️ by <strong>TransFamesh</strong>.</div>
+        </div>
     `;
     
     attachEvents();
