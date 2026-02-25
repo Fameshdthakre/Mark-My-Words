@@ -1,53 +1,79 @@
 import os
-from PIL import Image, ImageDraw, ImagePath
+from PIL import Image, ImageDraw
 
 def generate_icons():
     sizes = [16, 48, 128]
-    bg_color = (109, 40, 217) # Deep Indigo
-    highlight_color = (16, 185, 129) # Emerald Green
-    accent_color = (255, 255, 255) # White
+
+    # Electric Indigo Theme
+    # Gradient emulation (simple solid for now as PIL gradients are tricky without numpy)
+    bg_color_top = (109, 40, 217)  # Violet 700 (#6d28d9)
+    bg_color_bot = (76, 29, 149)   # Violet 900 (#4c1d95)
+
+    accent_emerald = (16, 185, 129) # Emerald (#10b981)
+    accent_white = (248, 250, 252) # Slate 50 (#f8fafc)
 
     if not os.path.exists('icons'):
         os.makedirs('icons')
 
     for size in sizes:
+        # Create image with alpha
         img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        # Background: Rounded Square (Squircle)
+        # 1. Background (Rounded Squircle)
         padding = size // 8
         rect = [padding, padding, size - padding, size - padding]
         radius = size // 4
-        draw.rounded_rectangle(rect, radius=radius, fill=bg_color)
 
-        # Symbol: Stylized "M" with a Highlight Swoosh
-        # Draw a thick 'M'
-        center = size // 2
-        stroke_width = max(1, size // 8)
+        # Draw background (simulated gradient via overlapping shapes?)
+        # For simplicity/sharpness at small sizes, use a solid deep indigo with a lighter border
+        draw.rounded_rectangle(rect, radius=radius, fill=bg_color_bot, outline=bg_color_top, width=max(1, size // 32))
 
-        # Lightning Bolt / Zap shape
-        # Top Left -> Middle Right -> Middle Left -> Bottom Right
-        points = [
-            (size * 0.35, size * 0.25),  # Top Left
-            (size * 0.65, size * 0.5),   # Mid Right
-            (size * 0.4, size * 0.5),    # Mid Left
-            (size * 0.7, size * 0.75)    # Bottom Right
-        ]
+        # 2. Icon: Stylized Highlighter Tip / "M"
+        # Let's do a bold diagonal highlight stroke (Emerald) over a text-like line (White)
 
-        # Draw Bolt (Polygon)
-        draw.polygon(points, fill=accent_color)
+        # Coordinates for "Text Line" (White Rect)
+        line_h = max(1, size // 8)
+        line_w = size * 0.5
+        line_x = (size - line_w) // 2
+        line_y = size * 0.65
 
-        # Add a "Highlight" underneath/glow
-        glow_width = size // 10
-        glow_offset = size // 20
-        glow_points = [(p[0] + glow_offset, p[1] + glow_offset) for p in points]
-        # Draw behind bolt? No, simplistic flat design is better for icon visibility at small sizes.
+        # Draw "Text" line
+        draw.line(
+            [(line_x, line_y), (line_x + line_w, line_y)],
+            fill=accent_white,
+            width=line_h
+        )
 
-        # Let's try a simple highlight line under the bolt
-        line_y = size * 0.8
-        line_start = size * 0.3
-        line_end = size * 0.7
-        draw.line([line_start, line_y, line_end, line_y], fill=highlight_color, width=max(1, size // 12))
+        # Coordinates for "Highlighter Stroke" (Emerald, semi-transparent look?)
+        # Since it's an icon, solid is better.
+        # Diagonal stroke across the text line
+        stroke_w = max(1, size // 6)
+        start_x = size * 0.35
+        start_y = size * 0.4
+        end_x = size * 0.65
+        end_y = size * 0.8
+
+        # Draw Highlighter Stroke (behind text? or over?)
+        # Over text looks like highlighting.
+        # Let's make it translucent-ish by drawing on a separate layer and compositing?
+        # Or just solid emerald. Solid emerald reads better as an app icon.
+
+        draw.line(
+            [(start_x, start_y), (end_x, end_y)],
+            fill=accent_emerald,
+            width=stroke_w
+        )
+
+        # 3. Add a small "Sparkle" or "Zap" accent in the corner
+        sparkle_center = (size * 0.75, size * 0.3)
+        sparkle_r = size // 16
+        if size > 16:
+             draw.ellipse(
+                (sparkle_center[0]-sparkle_r, sparkle_center[1]-sparkle_r,
+                 sparkle_center[0]+sparkle_r, sparkle_center[1]+sparkle_r),
+                fill=accent_white
+            )
 
         # Save
         filename = f'icons/icon{size}.png'
