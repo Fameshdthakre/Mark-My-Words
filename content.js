@@ -27,9 +27,8 @@ function applyHighlights() {
 
     try {
         chrome.storage.sync.get([STORAGE_KEY], (result) => {
-            if (!chrome.runtime?.id) return; // Check context validity again inside callback
             if (chrome.runtime.lastError) return; // Handle potential error
-
+            
             const config = result[STORAGE_KEY];
             if (!config) return;
 
@@ -43,7 +42,7 @@ function applyHighlights() {
         // 2. Check Excluded Domains
         if (config.settings && config.settings.excludedDomains) {
             const currentDomain = window.location.hostname;
-            const isExcluded = config.settings.excludedDomains.some(domain =>
+            const isExcluded = config.settings.excludedDomains.some(domain => 
                 currentDomain.includes(domain)
             );
             if (isExcluded) {
@@ -57,11 +56,11 @@ function applyHighlights() {
         if (config.settings && config.settings.performanceMode) {
             // Rough check for page size
             if (document.body.innerText.length > 50000) {
-                console.log('Highlight Pro: Performance mode active. Skipping large page.');
+                console.log('Mark My Words: Performance mode active. Skipping large page.');
                 return;
             }
         }
-
+        
         // Remove existing to re-apply
         removeAllHighlights();
 
@@ -95,16 +94,16 @@ function applyHighlights() {
 
         textNodes.forEach(node => {
             if (!node.nodeValue.trim()) return;
-
+            
             let text = node.nodeValue;
             let rangesToHighlight = [];
 
-            lists.forEach(list => {
+            lists.forEach((list, index) => {
                 let patternSource;
                 try {
                     if (list.options.isRegex) {
-                        const valid = list.words.filter(w => {
-                            try { new RegExp(w); return true; } catch { return false; }
+                        const valid = list.words.filter(w => { 
+                            try { new RegExp(w); return true; } catch { return false; } 
                         });
                         if (valid.length === 0) return;
                         patternSource = `(${valid.join('|')})`;
@@ -120,38 +119,66 @@ function applyHighlights() {
                         rangesToHighlight.push({
                             start: match.index,
                             end: match.index + match[0].length,
-                            style: list.styles
+                            length: match[0].length,
+                            style: list.styles,
+                            priority: index // Lower index = Higher priority
                         });
                     }
                 } catch (e) { }
             });
 
             if (rangesToHighlight.length > 0) {
-                const range = rangesToHighlight[0]; // Simple first-match win
+                // 1. Sort matches: Start Position -> Priority (List Order) -> Length
+                rangesToHighlight.sort((a, b) => {
+                    if (a.start !== b.start) return a.start - b.start;
+                    if (a.priority !== b.priority) return a.priority - b.priority;
+                    return b.length - a.length;
+                });
 
-                const span = document.createElement('mark');
-                span.className = 'highlight-pro-ext';
+                // 2. Filter overlapping matches
+                const finalRanges = [];
+                let lastEnd = 0;
+                
+                rangesToHighlight.forEach(r => {
+                    if (r.start >= lastEnd) {
+                        finalRanges.push(r);
+                        lastEnd = r.end;
+                    }
+                });
 
-                // Styles
-                span.style.backgroundColor = range.style.backgroundColor;
-                span.style.color = range.style.color;
-                span.style.borderRadius = '4px';
-                span.style.padding = '0 3px';
-                span.style.margin = '0 1px';
-                span.style.boxShadow = `0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px ${range.style.backgroundColor}40`;
-                span.style.fontInherit = 'true';
+                if (finalRanges.length > 0 && node.parentNode) {
+                    const fragment = document.createDocumentFragment();
+                    let cursor = 0;
 
-                span.textContent = text.substring(range.start, range.end);
+                    finalRanges.forEach(range => {
+                        // Append text before highlight
+                        if (range.start > cursor) {
+                            fragment.appendChild(document.createTextNode(text.substring(cursor, range.start)));
+                        }
 
-                const afterText = text.substring(range.end);
-                const beforeText = text.substring(0, range.start);
+                        // Create highlight span
+                        const span = document.createElement('mark');
+                        span.className = 'highlight-pro-ext';
+                        span.style.backgroundColor = range.style.backgroundColor;
+                        span.style.color = range.style.color;
+                        span.style.borderRadius = '4px';
+                        span.style.padding = '0 3px';
+                        span.style.margin = '0 1px';
+                        span.style.boxShadow = `0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px ${range.style.backgroundColor}40`;
+                        span.style.fontInherit = 'true';
+                        span.textContent = text.substring(range.start, range.end);
+                        
+                        fragment.appendChild(span);
+                        cursor = range.end;
+                    });
 
-                const parent = node.parentNode;
-                if (beforeText) parent.insertBefore(document.createTextNode(beforeText), node);
-                parent.insertBefore(span, node);
-                if (afterText) parent.insertBefore(document.createTextNode(afterText), node);
+                    // Append remaining text
+                    if (cursor < text.length) {
+                        fragment.appendChild(document.createTextNode(text.substring(cursor)));
+                    }
 
-                parent.removeChild(node);
+                    node.parentNode.replaceChild(fragment, node);
+                }
             }
         });
 
@@ -159,7 +186,7 @@ function applyHighlights() {
             updateBadge(document.querySelectorAll('mark.highlight-pro-ext').length);
         });
     } catch (e) {
-        console.log("Highlight Pro: Extension context invalidated.");
+        console.log("Mark My Words: Extension context invalidated.");
         if (observer) observer.disconnect();
     }
 }

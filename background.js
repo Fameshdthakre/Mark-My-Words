@@ -45,7 +45,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId.startsWith("add-to-")) {
         const listId = info.menuItemId.replace("add-to-", "");
         const text = info.selectionText.trim();
-
+        
         if (!text) return;
 
         chrome.storage.sync.get([STORAGE_KEY], (result) => {
@@ -56,11 +56,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             const listIndex = config.lists.findIndex(l => l.id === listId);
             if (listIndex !== -1) {
                 const list = config.lists[listIndex];
-
+                
                 // Add word if not exists
                 if (!list.words.includes(text)) {
                     list.words.push(text);
-
+                    
                     // Save back to storage - this will trigger onChanged -> updateContextMenus
                     chrome.storage.sync.set({ [STORAGE_KEY]: config }, () => {
                         // Notify tab to refresh immediately for better UX

@@ -39,7 +39,6 @@ const DEFAULT_CONFIG = {
         enabled: true,
         options: { caseSensitive: false, wholeWord: true, isRegex: false }
     }],
-    presets: [...PRESETS], // Initialize with defaults
     settings: {
         globalEnabled: true,
         excludedDomains: [],
@@ -64,21 +63,13 @@ function init() {
         chrome.storage.sync.get([STORAGE_KEY], (result) => {
             if (result[STORAGE_KEY]) {
                 state.config = result[STORAGE_KEY];
-                // Config loaded, ensure presets exist (migration for existing V4 users)
-                if (!state.config.presets) {
-                    state.config.presets = [...PRESETS];
-                    save();
-                } else {
-                    render();
-                }
+                render();
             } else {
                 // If sync is empty, check LOCAL for migration
                 chrome.storage.local.get(['highlighter_lists_v3'], (localResult) => {
                     if (localResult.highlighter_lists_v3) {
                         // Migrate V3 lists to V4 config
                         state.config.lists = localResult.highlighter_lists_v3;
-                        // Ensure presets exist
-                        if (!state.config.presets) state.config.presets = [...PRESETS];
                         save(); // This will save to sync
                     } else {
                         // No data anywhere, use defaults
@@ -96,14 +87,14 @@ function init() {
     }
 }
 
-function save() {
+function save(shouldRender = true) {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
         chrome.storage.sync.set({ [STORAGE_KEY]: state.config }, () => {
             notifyContentScript();
         });
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.config));
-    render();
+    if (shouldRender) render();
 }
 
 function notifyContentScript() {
@@ -126,7 +117,7 @@ function render() {
         tc.id = 'toast-container';
         document.body.appendChild(tc);
     }
-
+    
     // Header
     const headerHtml = `
     <header>
@@ -135,15 +126,15 @@ function render() {
             <div>
                 <h1 class="app-title">Mark My Words</h1>
                 <div class="status-badge">
-                    <div class="status-dot" style="background-color: ${state.config.settings.globalEnabled ? 'var(--accent)' : 'var(--text-muted)'}"></div>
+                    <div class="status-dot" style="background-color: ${state.config.settings.globalEnabled ? 'var(--accent)' : 'var(--text-muted)'}"></div> 
                     ${state.config.settings.globalEnabled ? 'Active' : 'Paused'}
                 </div>
             </div>
         </div>
         <div>
-            ${state.activeView === 'dashboard'
+            ${state.activeView === 'dashboard' 
                 ? `<button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" aria-label="Re-scan Page" style="margin-right: 4px;">${ICONS.eye}</button>
-                   <button class="btn btn-icon" id="btn-settings" title="Settings" aria-label="Settings">${ICONS.settings}</button>`
+                   <button class="btn btn-icon" id="btn-settings" title="Settings" aria-label="Settings">${ICONS.settings}</button>` 
                 : `<button id="nav-back" class="btn btn-secondary" style="font-size: 0.75rem;" aria-label="Go Back">${ICONS.chevronLeft} Back</button>`
             }
         </div>
@@ -168,11 +159,8 @@ function render() {
             ${mainHtml}
         </main>
         ${previewHtml}
-        <div class="signature">
-            <div class="brand-line">Created with ❤️ by <strong>TransFamesh</strong>.</div>
-        </div>
     `;
-
+    
     attachEvents();
 }
 
@@ -180,12 +168,12 @@ function render() {
 
 function renderDashboardHtml() {
     let lists = state.config.lists;
-
+    
     // Filter by search
     if (state.searchQuery) {
         const query = state.searchQuery.toLowerCase();
-        lists = lists.filter(l =>
-            l.name.toLowerCase().includes(query) ||
+        lists = lists.filter(l => 
+            l.name.toLowerCase().includes(query) || 
             l.words.some(w => w.toLowerCase().includes(query))
         );
     }
@@ -215,7 +203,7 @@ function renderDashboardHtml() {
                 <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
                 <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">0 active rules</p>
             </div>
-            <button id="btn-create" class="btn btn-primary">${ICONS.plus} New</button>
+            <button id="btn-create" class="btn btn-primary">${ICONS.plus}</button>
         </div>
         <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; color: var(--text-muted);">
             <div style="width: 80px; height: 80px; background: linear-gradient(135deg, rgba(109, 40, 217, 0.2), rgba(139, 92, 246, 0.2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; box-shadow: 0 0 20px rgba(109, 40, 217, 0.3);">
@@ -229,14 +217,14 @@ function renderDashboardHtml() {
 
     const listsHtml = lists.map((list, index) => {
         // Check if this item was just added (simple heuristic or state tracking could be better, but for now we assume new items are at end if created)
-        // Better: We rely on the fact that re-renders happen.
+        // Better: We rely on the fact that re-renders happen. 
         // To make it specific, we could add a temporary 'isNew' flag in state, but simpler is just to not over-engineer for now.
         // Let's just rely on CSS transitions for hover. For entry animation, we need a flag.
         const isNew = list.isNew === true;
         // Clean up flag after render (in a timeout or next cycle) - but state is immutable-ish here.
         // We will just add the class if the ID matches state.lastCreatedId
         const animationClass = (state.lastCreatedId === list.id) ? 'new-item' : '';
-
+        
         return `
         <div class="list-item ${animationClass}" data-id="${list.id}" draggable="true">
             <div class="drag-handle" style="cursor: grab; color: var(--text-muted); opacity: 0.5; padding: 0.5rem;">
@@ -245,7 +233,7 @@ function renderDashboardHtml() {
             <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" data-action="toggle" data-id="${list.id}">
                 <div class="toggle-dot"></div>
             </div>
-
+            
             <div class="list-content" style="flex: 1; min-width: 0; padding: 0 0.5rem;" data-action="edit" data-id="${list.id}">
                 <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;">
                     ${list.name}
@@ -256,13 +244,13 @@ function renderDashboardHtml() {
                     <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">${list.words.length} KEYWORDS</span>
                 </div>
             </div>
-
+            
             <button class="btn btn-icon" data-action="delete" data-id="${list.id}" title="Delete Rule" aria-label="Delete Rule" style="opacity: 0.6;">
                 ${ICONS.trash}
             </button>
         </div>
     `}).join('');
-
+    
     // Clear the animation flag after render
     if (state.lastCreatedId) {
         setTimeout(() => { state.lastCreatedId = null; }, 500);
@@ -270,19 +258,19 @@ function renderDashboardHtml() {
 
     return `
     <div class="dashboard-header">
-        <div style="flex: 1; display: flex; align-items: center; gap: 0.75rem;">
+        <div style="flex: 1; display: flex; align-items: center; gap: 1rem;">
             <div>
-                <h2 style="font-size: 1rem; font-weight: 600; margin: 0;">Your Rules</h2>
-                <p style="font-size: 0.7rem; color: var(--text-muted); margin: 0.15rem 0 0;">${lists.length} / ${state.config.lists.length} active</p>
+                <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Your Rules</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.25rem 0 0;">${lists.length} / ${state.config.lists.length} rules</p>
             </div>
             <div style="position: relative;">
-                <button id="btn-toggle-search" class="btn btn-icon" title="Search" aria-label="Search" style="padding: 0.4rem;">${ICONS.search}</button>
-                <div id="search-container" style="display: ${state.searchVisible ? 'block' : 'none'}; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 0.5rem; width: 140px; background: var(--bg-glass); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.25rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 20;">
-                    <input type="text" id="input-search" value="${state.searchQuery}" placeholder="Search..." style="width: 100%; background: transparent; border: none; color: white; font-size: 0.75rem; padding: 0.25rem; outline: none;">
+                <button id="btn-toggle-search" class="btn btn-icon" title="Search">${ICONS.search}</button>
+                <div id="search-container" style="display: ${state.searchVisible ? 'block' : 'none'}; position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 0.5rem; width: 150px; background: var(--bg-glass); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.25rem;">
+                    <input type="text" id="input-search" value="${state.searchQuery}" placeholder="Search..." style="width: 100%; background: transparent; border: none; color: white; font-size: 0.8rem; padding: 0.25rem; outline: none;">
                 </div>
             </div>
         </div>
-        <button id="btn-create" class="btn btn-primary" title="Create New Rule" aria-label="Create New Rule" style="padding: 0.6rem; border-radius: 50%; width: 36px; height: 36px;">${ICONS.plus}</button>
+        <button id="btn-create" class="btn btn-primary">${ICONS.plus}</button>
     </div>
     ${alertHtml}
     <div class="list-container">${listsHtml}</div>`;
@@ -314,16 +302,16 @@ function renderEditorHtml() {
         <div class="input-group">
             <label class="label">Highlight Style</label>
             <div class="color-picker-row" style="flex-wrap: wrap; gap: 0.5rem;">
-                ${(state.config.presets || PRESETS).map(p => {
+                ${PRESETS.map(p => {
                     const isActive = list.styles.backgroundColor === p.bg;
-                    const style = isActive
+                    const style = isActive 
                         ? `background-color: ${p.bg}; color: ${p.text}; box-shadow: 0 0 0 2px white, 0 0 10px ${p.bg}; transform: scale(1.1);`
                         : `background-color: ${p.bg}; color: ${p.text};`;
-                    return `<button class="color-btn" style="${style}" data-action="setColor" data-bg="${p.bg}" data-text="${p.text}" title="${p.name || 'Custom'}">Aa</button>`;
+                    return `<button class="color-btn" style="${style}" data-action="setColor" data-bg="${p.bg}" data-text="${p.text}">Aa</button>`;
                 }).join('')}
             </div>
-
-            <div style="margin-top: 1rem; display: flex; gap: 1rem; align-items: flex-end;">
+            
+            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
                 <div style="flex: 1;">
                     <label class="label" style="font-size: 0.75rem;">Background</label>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -336,7 +324,6 @@ function renderEditorHtml() {
                         <input type="color" id="custom-text-picker" value="${list.styles.color}" style="width: 100%; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
                     </div>
                 </div>
-                <button id="btn-save-style" class="btn btn-secondary" style="height: 36px; padding: 0 0.75rem;" title="Save Custom Style">${ICONS.plus}</button>
             </div>
         </div>
 
@@ -408,9 +395,9 @@ function renderSettingsHtml() {
                 <input type="file" id="file-import" accept=".json" style="display: none;">
             </div>
         </div>
-
+        
         <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
-            Mark My Words v1.1.0<br>
+            Mark My Words v1.2.0<br>
             Sync enabled
         </div>
     </div>`;
@@ -419,7 +406,7 @@ function renderSettingsHtml() {
 function renderPreviewHtml() {
     const list = state.activeView === 'editor' ? state.config.lists.find(l => l.id === state.editingListId) : null;
     let sampleText = "Preview: Mark My Words makes it easy to style your web.";
-
+    
     if (list) {
          const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Mark My Words</span>`;
          sampleText = `Preview: ${hl} makes it easy to style your web.`;
@@ -481,7 +468,7 @@ function attachEvents() {
             // Refocus after render
             const input = document.getElementById('input-search');
             if(input) {
-                input.focus();
+                input.focus(); 
                 input.setSelectionRange(input.value.length, input.value.length);
             }
         });
@@ -495,7 +482,7 @@ function attachEvents() {
 
             const action = target.dataset.action;
             const id = target.dataset.id;
-
+            
             if (action === 'edit') {
                 state.editingListId = id;
                 state.activeView = 'editor';
@@ -530,7 +517,7 @@ function attachEvents() {
                 draggedItem.style.opacity = '1';
                 draggedItem = null;
                 draggedId = null;
-
+                
                 // Persist new order
                 const newOrderIds = Array.from(listContainer.querySelectorAll('.list-item')).map(el => el.dataset.id);
                 // Reorder config.lists based on newOrderIds
@@ -543,7 +530,7 @@ function attachEvents() {
                 state.config.lists.forEach(l => {
                     if (!newOrderIds.includes(l.id)) reorderedLists.push(l);
                 });
-
+                
                 state.config.lists = reorderedLists;
                 save();
             }
@@ -573,69 +560,100 @@ function attachEvents() {
             // Update state on input to keep it fresh in memory
             nameInput.addEventListener('input', (e) => { list.name = e.target.value; });
             // Save and re-render only when done editing (blur/enter)
-            nameInput.addEventListener('change', () => { save(); });
+            nameInput.addEventListener('change', () => { save(false); });
         }
 
         document.querySelectorAll('.option-card').forEach(card => {
             card.addEventListener('click', () => {
                 const key = card.dataset.key;
                 list.options[key] = !list.options[key];
-                save();
+                
+                // Manual UI update
+                if (list.options[key]) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+                save(false);
             });
         });
-
+        
         const bgPicker = document.getElementById('custom-bg-picker');
         if (bgPicker) {
             bgPicker.addEventListener('input', (e) => {
                 list.styles.backgroundColor = e.target.value;
-                // Live update preview if needed, but save triggers render
-                save();
+                
+                // Manual Preview Update
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) {
+                    previewSpan.style.backgroundColor = list.styles.backgroundColor;
+                    // Also update box-shadow for effect
+                    previewSpan.style.boxShadow = `0 2px 4px rgba(0,0,0,0.2), 0 0 0 1px ${list.styles.backgroundColor}40`;
+                }
+                
+                // Also update the color preset buttons if they match? No, custom overrides.
+                // Just remove 'active' styling from presets maybe?
+                document.querySelectorAll('.color-btn').forEach(btn => {
+                     // Reset scale/box-shadow
+                     btn.style.transform = '';
+                     btn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                });
+
+                save(false);
             });
         }
-
+        
         const textPicker = document.getElementById('custom-text-picker');
         if (textPicker) {
             textPicker.addEventListener('input', (e) => {
                 list.styles.color = e.target.value;
-                save();
-            });
-        }
+                
+                // Manual Preview Update
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) previewSpan.style.color = list.styles.color;
 
-        const saveStyleBtn = document.getElementById('btn-save-style');
-        if (saveStyleBtn) {
-            saveStyleBtn.addEventListener('click', () => {
-                const currentBg = list.styles.backgroundColor;
-                const currentText = list.styles.color;
-
-                // Check for duplicates
-                const exists = state.config.presets.some(p => p.bg === currentBg && p.text === currentText);
-
-                if (!exists) {
-                    state.config.presets.push({
-                        bg: currentBg,
-                        text: currentText,
-                        name: 'Custom'
-                    });
-                    save();
-                    showToast('Style saved to presets!', 'success');
-                } else {
-                    showToast('Style already in presets.', 'info');
-                }
+                save(false);
             });
         }
 
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                list.styles = { backgroundColor: btn.dataset.bg, color: btn.dataset.text };
-                save();
+                const bg = btn.dataset.bg;
+                const text = btn.dataset.text;
+                list.styles = { backgroundColor: bg, color: text };
+                
+                // Manual UI Update
+                // Update Pickers
+                if(bgPicker) bgPicker.value = bg;
+                if(textPicker) textPicker.value = text;
+                
+                // Update Preview
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) {
+                    previewSpan.style.backgroundColor = bg;
+                    previewSpan.style.color = text;
+                    previewSpan.style.boxShadow = `0 2px 4px rgba(0,0,0,0.2), 0 0 0 1px ${bg}40`;
+                }
+                
+                // Update Buttons Visual State
+                document.querySelectorAll('.color-btn').forEach(b => {
+                    if (b === btn) {
+                        b.style.boxShadow = `0 0 0 2px white, 0 0 10px ${bg}`;
+                        b.style.transform = 'scale(1.1)';
+                    } else {
+                        b.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                        b.style.transform = '';
+                    }
+                });
+
+                save(false);
             });
         });
 
         document.querySelectorAll('[data-action="removeWord"]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                list.words = list.words.filter(w => w !== btn.dataset.word);
-                save();
+                handleRemoveWord(list, btn.dataset.word, btn.closest('.tag'));
             });
         });
 
@@ -657,13 +675,41 @@ function attachEvents() {
                 const val = input.value.trim();
                 if (val && !list.words.includes(val)) {
                     list.words.push(val);
-                    save();
+                    
+                    // Manual DOM Update to avoid shaking
+                    const container = document.querySelector('.tag-container');
+                    // Remove "No keywords" placeholder if it exists
+                    if (list.words.length === 1) {
+                         const placeholder = container.querySelector('span[style*="font-style: italic"]');
+                         if(placeholder) placeholder.remove();
+                    }
+
+                    const temp = document.createElement('div');
+                    temp.innerHTML = `
+                    <span class="tag" style="background-color: ${list.styles.backgroundColor}20; color: white; border: 1px solid ${list.styles.backgroundColor}60;">
+                        ${val} <span style="cursor: pointer; opacity: 0.7; margin-left: 4px; display: flex;" data-action="removeWord" data-word="${val}">${ICONS.x}</span>
+                    </span>`;
+                    const newTag = temp.firstElementChild;
+                    
+                    // Attach delete event
+                    const delBtn = newTag.querySelector('[data-action="removeWord"]');
+                    if (delBtn) {
+                        delBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            handleRemoveWord(list, val, newTag);
+                        });
+                    }
+
+                    container.appendChild(newTag);
+                    input.value = ''; 
+                    
+                    save(false); // Skip render
                 } else {
-                    input.value = '';
+                    input.value = ''; 
                 }
             });
         }
-
+        
         const newInput = document.getElementById('new-word-input');
         if (newInput) {
             // Regex Validation
@@ -671,7 +717,7 @@ function attachEvents() {
                 const val = e.target.value;
                 const btn = document.getElementById('btn-add-word');
                 const errorMsg = document.getElementById('regex-error-msg');
-
+                
                 if (list.options.isRegex && val) {
                     try {
                         new RegExp(val);
@@ -696,7 +742,7 @@ function attachEvents() {
                 const paste = (e.clipboardData || window.clipboardData).getData('text');
                 const lines = paste.split(/\r\n|\r|\n/);
                 let added = false;
-
+                
                 lines.forEach(line => {
                     const val = line.trim();
                     if (!val) return;
@@ -714,7 +760,7 @@ function attachEvents() {
                         added = true;
                     }
                 });
-
+                
                 if (added) {
                     save();
                 }
@@ -728,7 +774,16 @@ function attachEvents() {
         if (globalToggle) {
             globalToggle.addEventListener('click', () => {
                 state.config.settings.globalEnabled = !state.config.settings.globalEnabled;
-                save();
+                
+                // Manual UI Toggle
+                if (state.config.settings.globalEnabled) {
+                    globalToggle.classList.add('on');
+                    globalToggle.classList.remove('off');
+                } else {
+                    globalToggle.classList.add('off');
+                    globalToggle.classList.remove('on');
+                }
+                save(false);
             });
         }
 
@@ -736,7 +791,16 @@ function attachEvents() {
         if (perfToggle) {
             perfToggle.addEventListener('click', () => {
                 state.config.settings.performanceMode = !state.config.settings.performanceMode;
-                save();
+                
+                // Manual UI Toggle
+                if (state.config.settings.performanceMode) {
+                    perfToggle.classList.add('on');
+                    perfToggle.classList.remove('off');
+                } else {
+                    perfToggle.classList.add('off');
+                    perfToggle.classList.remove('on');
+                }
+                save(false);
             });
         }
 
@@ -745,7 +809,7 @@ function attachEvents() {
             excludedArea.addEventListener('change', (e) => {
                 const lines = e.target.value.split('\n').map(s => s.trim()).filter(s => s);
                 state.config.settings.excludedDomains = lines;
-                save();
+                save(false); // No visual change needed on textarea
             });
         }
 
@@ -801,15 +865,15 @@ function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-
+    
     // Icon based on type
     let icon = ICONS.check;
     if (type === 'error') icon = ICONS.alert;
-
+    
     toast.innerHTML = `<div style="flex-shrink:0;">${icon}</div><div>${message}</div>`;
-
+    
     container.appendChild(toast);
-
+    
     setTimeout(() => {
         toast.classList.add('hiding');
         toast.addEventListener('animationend', () => toast.remove());
@@ -819,7 +883,7 @@ function showToast(message, type = 'info') {
 function confirmAction(message, onConfirm) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-
+    
     overlay.innerHTML = `
         <div class="modal">
             <h3 style="margin: 0 0 0.5rem; font-size: 1.1rem;">Confirm Action</h3>
@@ -830,11 +894,11 @@ function confirmAction(message, onConfirm) {
             </div>
         </div>
     `;
-
+    
     document.body.appendChild(overlay);
-
+    
     // Focus management could be added here
-
+    
     document.getElementById('modal-cancel').addEventListener('click', () => overlay.remove());
     document.getElementById('modal-confirm').addEventListener('click', () => {
         onConfirm();
@@ -854,6 +918,17 @@ function getDragAfterElement(container, y) {
             return closest;
         }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function handleRemoveWord(list, word, tagElement) {
+    list.words = list.words.filter(w => w !== word);
+    if (tagElement) tagElement.remove();
+    
+    const container = document.querySelector('.tag-container');
+    if (container && list.words.length === 0) {
+            container.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No keywords added yet.</span>';
+    }
+    save(false);
 }
 
 function createList() {
