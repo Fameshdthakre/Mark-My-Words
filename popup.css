@@ -65,8 +65,6 @@ body {
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
-/* --- Header --- */
-header {
     padding: 0.75rem 1rem; /* Reduced padding */
     background: rgba(2, 6, 23, 0.7);
     backdrop-filter: blur(12px);
@@ -82,7 +80,6 @@ header {
     height: 3.5rem; /* Fixed height for compactness */
 }
 
-.logo-box {
     width: 2rem; /* Reduced size */
     height: 2rem;
     background: linear-gradient(135deg, var(--primary), var(--primary-light));
@@ -95,12 +92,10 @@ header {
     box-shadow: 0 0 10px var(--primary-glow);
 }
 
-.logo-box svg {
     width: 1.25rem;
     height: 1.25rem;
 }
 
-.app-title {
     font-size: 0.9rem; /* Smaller title */
     font-weight: 600;
     letter-spacing: -0.01em;
@@ -110,7 +105,6 @@ header {
     -webkit-text-fill-color: transparent;
 }
 
-.status-badge {
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -122,7 +116,6 @@ header {
     margin-top: 1px;
 }
 
-.status-dot {
     width: 5px; /* Smaller dot */
     height: 5px;
     background-color: var(--accent);
@@ -194,7 +187,6 @@ header {
 }
 
 /* --- Dashboard --- */
-.dashboard-header {
     padding: 1rem 1.25rem; /* Reduced padding */
     display: flex;
     justify-content: space-between;
@@ -550,4 +542,101 @@ header {
 .signature strong {
     color: var(--text-main);
     font-weight: 500;
+}
+/* --- Header --- */
+header {
+    padding: 0.75rem 1rem; /* Reduced padding */
+    background: rgba(2, 6, 23, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0; /* Header doesn't shrink */
+    height: 3.5rem; /* Fixed height for compactness */
+}
+
+.logo-box {
+    width: 2rem; /* Reduced size */
+    height: 2rem;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border-radius: 0.5rem; /* Tighter radius */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.625rem;
+    color: white;
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.logo-box svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.app-title {
+    font-size: 0.9rem; /* Smaller title */
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+    background: linear-gradient(to right, #fff, #cbd5e1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 1px;
+}
+
+.status-dot {
+    width: 5px; /* Smaller dot */
+    height: 5px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+    animation: pulse 3s infinite ease-in-out;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+}
+
+.action-group {
+    display: flex;
+    align-items: center;
+    background: var(--bg-glass);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.125rem;
+}
+
+.action-group .btn-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.375rem;
+}
+
+.action-group .btn-icon:hover {
+    background-color: var(--bg-glass-hover);
+    color: white;
+}
+
+.divider {
+    width: 1px;
+    height: 1rem;
+    background-color: var(--border);
+    margin: 0 0.125rem;
 }

@@ -142,10 +142,13 @@ function render() {
                 </div>
             </div>
         </div>
-        <div>
+        <div class="header-actions">
             ${state.activeView === 'dashboard' 
-                ? `<button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" aria-label="Re-scan Page" style="margin-right: 4px;">${ICONS.eye}</button>
-                   <button class="btn btn-icon" id="btn-settings" title="Settings" aria-label="Settings">${ICONS.settings}</button>` 
+                ? `<div class="action-group">
+                       <button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" aria-label="Re-scan Page">${ICONS.eye}</button>
+                       <div class="divider"></div>
+                       <button class="btn btn-icon" id="btn-settings" title="Settings" aria-label="Settings">${ICONS.settings}</button>
+                   </div>`
                 : `<button id="nav-back" class="btn btn-secondary" style="font-size: 0.75rem;" aria-label="Go Back">${ICONS.chevronLeft} Back</button>`
             }
         </div>
