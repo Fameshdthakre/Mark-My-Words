@@ -3,10 +3,25 @@
 const STORAGE_KEY = 'highlighter_config_v4';
 
 // 1. Initialize Context Menus
+let isUpdatingMenus = false;
+let pendingMenuUpdate = false;
+
 function updateContextMenus() {
+    if (isUpdatingMenus) {
+        pendingMenuUpdate = true;
+        return;
+    }
+    isUpdatingMenus = true;
+    pendingMenuUpdate = false;
+
     chrome.contextMenus.removeAll(() => {
         chrome.storage.sync.get([STORAGE_KEY], (result) => {
             const config = result[STORAGE_KEY];
+
+            const onMenuCreated = () => {
+                let _ = chrome.runtime.lastError; // Ignore unchecked errors
+            };
+
             if (!config || !config.lists || config.lists.length === 0) {
                 // No lists available
                 chrome.contextMenus.create({
@@ -14,7 +29,9 @@ function updateContextMenus() {
                     title: "No highlight lists active",
                     contexts: ["selection"],
                     enabled: false
-                });
+                }, onMenuCreated);
+
+                finishMenuUpdate();
                 return;
             }
 
@@ -23,7 +40,7 @@ function updateContextMenus() {
                 id: "highlight-selection",
                 title: "Highlight '%s'",
                 contexts: ["selection"]
-            });
+            }, onMenuCreated);
 
             // Create Sub-menus for each list
             config.lists.forEach(list => {
@@ -33,10 +50,19 @@ function updateContextMenus() {
                     parentId: "highlight-selection",
                     title: `Add to "${list.name}"`,
                     contexts: ["selection"]
-                });
+                }, onMenuCreated);
             });
+
+            finishMenuUpdate();
         });
     });
+}
+
+function finishMenuUpdate() {
+    isUpdatingMenus = false;
+    if (pendingMenuUpdate) {
+        updateContextMenus();
+    }
 }
 
 // 2. Handle Clicks
