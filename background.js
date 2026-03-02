@@ -30,30 +30,32 @@ function updateContextMenus() {
                     contexts: ["selection"],
                     enabled: false
                 }, onMenuCreated);
-
                 finishMenuUpdate();
                 return;
             }
 
             // Create Parent Menu
+            const activeLists = config.lists.filter(l => l.enabled);
+
             chrome.contextMenus.create({
                 id: "highlight-selection",
                 title: "Highlight '%s'",
                 contexts: ["selection"]
-            }, onMenuCreated);
+            }, () => {
+                let _ = chrome.runtime.lastError; // Ignore unchecked errors
 
-            // Create Sub-menus for each list
-            config.lists.forEach(list => {
-                if (!list.enabled) return;
-                chrome.contextMenus.create({
-                    id: `add-to-${list.id}`,
-                    parentId: "highlight-selection",
-                    title: `Add to "${list.name}"`,
-                    contexts: ["selection"]
-                }, onMenuCreated);
+                // Create Sub-menus for each list
+                activeLists.forEach(list => {
+                    chrome.contextMenus.create({
+                        id: `add-to-${list.id}`,
+                        parentId: "highlight-selection",
+                        title: `Add to "${list.name}"`,
+                        contexts: ["selection"]
+                    }, onMenuCreated);
+                });
+
+                finishMenuUpdate();
             });
-
-            finishMenuUpdate();
         });
     });
 }

@@ -42,7 +42,8 @@ const DEFAULT_CONFIG = {
     settings: {
         globalEnabled: true,
         excludedDomains: [],
-        performanceMode: false
+        performanceMode: false,
+        autoTriggerInterval: 'Off'
     }
 };
 
@@ -145,6 +146,12 @@ function render() {
         <div class="header-actions">
             ${state.activeView === 'dashboard' 
                 ? `<div class="action-group">
+                       <select id="auto-trigger-interval" style="background: var(--surface); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 4px; font-size: 0.7rem; cursor: pointer;" title="Auto-trigger Rescan Interval">
+                           <option value="Off" ${state.config.settings.autoTriggerInterval === 'Off' ? 'selected' : ''}>Off</option>
+                           <option value="1m" ${state.config.settings.autoTriggerInterval === '1m' ? 'selected' : ''}>1m</option>
+                           <option value="5m" ${state.config.settings.autoTriggerInterval === '5m' ? 'selected' : ''}>5m</option>
+                           <option value="1h" ${state.config.settings.autoTriggerInterval === '1h' ? 'selected' : ''}>1hr</option>
+                       </select>
                        <button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" aria-label="Re-scan Page">${ICONS.eye}</button>
                        <div class="divider"></div>
                        <button class="btn btn-icon" id="btn-settings" title="Settings" aria-label="Settings">${ICONS.settings}</button>
@@ -335,6 +342,20 @@ function renderEditorHtml() {
                     </div>
                 </div>
             </div>
+            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem;">
+                    <input type="checkbox" id="style-bold-checkbox" ${list.styles.bold ? 'checked' : ''}>
+                    <strong>Bold</strong>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem;">
+                    <input type="checkbox" id="style-italic-checkbox" ${list.styles.italic ? 'checked' : ''}>
+                    <em>Italic</em>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem;">
+                    <input type="checkbox" id="style-strike-checkbox" ${list.styles.strikeThrough ? 'checked' : ''}>
+                    <del>Strike</del>
+                </label>
+            </div>
         </div>
 
         <div class="input-group" style="margin-bottom: 0;">
@@ -446,6 +467,14 @@ function attachEvents() {
 
     const settingsBtn = document.getElementById('btn-settings');
     if (settingsBtn) settingsBtn.addEventListener('click', () => { state.activeView = 'settings'; render(); });
+
+    const intervalSelect = document.getElementById('auto-trigger-interval');
+    if (intervalSelect) {
+        intervalSelect.addEventListener('change', (e) => {
+            state.config.settings.autoTriggerInterval = e.target.value;
+            save(false);
+        });
+    }
 
     const refreshBtn = document.getElementById('btn-refresh');
     if (refreshBtn) {
@@ -605,6 +634,36 @@ function attachEvents() {
                      btn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
                 });
 
+                save(false);
+            });
+        }
+
+        const boldCheckbox = document.getElementById('style-bold-checkbox');
+        if (boldCheckbox) {
+            boldCheckbox.addEventListener('change', (e) => {
+                list.styles.bold = e.target.checked;
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) previewSpan.style.fontWeight = list.styles.bold ? 'bold' : 'normal';
+                save(false);
+            });
+        }
+
+        const italicCheckbox = document.getElementById('style-italic-checkbox');
+        if (italicCheckbox) {
+            italicCheckbox.addEventListener('change', (e) => {
+                list.styles.italic = e.target.checked;
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) previewSpan.style.fontStyle = list.styles.italic ? 'italic' : 'normal';
+                save(false);
+            });
+        }
+
+        const strikeCheckbox = document.getElementById('style-strike-checkbox');
+        if (strikeCheckbox) {
+            strikeCheckbox.addEventListener('change', (e) => {
+                list.styles.strikeThrough = e.target.checked;
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) previewSpan.style.textDecoration = list.styles.strikeThrough ? 'line-through' : 'none';
                 save(false);
             });
         }
