@@ -342,19 +342,16 @@ function renderEditorHtml() {
                     </div>
                 </div>
             </div>
-            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem;">
-                    <input type="checkbox" id="style-bold-checkbox" ${list.styles.bold ? 'checked' : ''}>
-                    <strong>Bold</strong>
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem;">
-                    <input type="checkbox" id="style-italic-checkbox" ${list.styles.italic ? 'checked' : ''}>
-                    <em>Italic</em>
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem;">
-                    <input type="checkbox" id="style-strike-checkbox" ${list.styles.strikeThrough ? 'checked' : ''}>
-                    <del>Strike</del>
-                </label>
+            <div class="options-grid" style="margin-top: 1rem;">
+                <div class="option-card ${list.styles.bold ? 'active' : ''}" data-action="toggleStyle" data-key="bold">
+                    <span style="font-size: 1.25rem; margin-bottom: 2px;"><strong>B</strong></span> Bold
+                </div>
+                <div class="option-card ${list.styles.italic ? 'active' : ''}" data-action="toggleStyle" data-key="italic">
+                    <span style="font-size: 1.25rem; margin-bottom: 2px;"><em>I</em></span> Italic
+                </div>
+                <div class="option-card ${list.styles.strikeThrough ? 'active' : ''}" data-action="toggleStyle" data-key="strikeThrough">
+                    <span style="font-size: 1.25rem; margin-bottom: 2px;"><del>S</del></span> Strike
+                </div>
             </div>
         </div>
 
@@ -439,7 +436,11 @@ function renderPreviewHtml() {
     let sampleText = "Preview: Mark My Words makes it easy to style your web.";
     
     if (list) {
-         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Mark My Words</span>`;
+         const boldStyle = list.styles.bold ? 'font-weight: bold;' : '';
+         const italicStyle = list.styles.italic ? 'font-style: italic;' : '';
+         const strikeStyle = list.styles.strikeThrough ? 'text-decoration: line-through;' : '';
+
+         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); ${boldStyle} ${italicStyle} ${strikeStyle}">Mark My Words</span>`;
          sampleText = `Preview: ${hl} makes it easy to style your web.`;
     }
 
@@ -638,35 +639,28 @@ function attachEvents() {
             });
         }
 
-        const boldCheckbox = document.getElementById('style-bold-checkbox');
-        if (boldCheckbox) {
-            boldCheckbox.addEventListener('change', (e) => {
-                list.styles.bold = e.target.checked;
-                const previewSpan = document.querySelector('.preview-box span');
-                if (previewSpan) previewSpan.style.fontWeight = list.styles.bold ? 'bold' : 'normal';
-                save(false);
-            });
-        }
+        document.querySelectorAll('[data-action="toggleStyle"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.key;
+                list.styles[key] = !list.styles[key];
 
-        const italicCheckbox = document.getElementById('style-italic-checkbox');
-        if (italicCheckbox) {
-            italicCheckbox.addEventListener('change', (e) => {
-                list.styles.italic = e.target.checked;
-                const previewSpan = document.querySelector('.preview-box span');
-                if (previewSpan) previewSpan.style.fontStyle = list.styles.italic ? 'italic' : 'normal';
-                save(false);
-            });
-        }
+                // Manual visual update for smoother feel
+                if (list.styles[key]) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
 
-        const strikeCheckbox = document.getElementById('style-strike-checkbox');
-        if (strikeCheckbox) {
-            strikeCheckbox.addEventListener('change', (e) => {
-                list.styles.strikeThrough = e.target.checked;
                 const previewSpan = document.querySelector('.preview-box span');
-                if (previewSpan) previewSpan.style.textDecoration = list.styles.strikeThrough ? 'line-through' : 'none';
+                if (previewSpan) {
+                    if (key === 'bold') previewSpan.style.fontWeight = list.styles.bold ? 'bold' : 'normal';
+                    if (key === 'italic') previewSpan.style.fontStyle = list.styles.italic ? 'italic' : 'normal';
+                    if (key === 'strikeThrough') previewSpan.style.textDecoration = list.styles.strikeThrough ? 'line-through' : 'none';
+                }
+
                 save(false);
             });
-        }
+        });
         
         const textPicker = document.getElementById('custom-text-picker');
         if (textPicker) {
