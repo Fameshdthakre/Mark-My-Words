@@ -425,7 +425,7 @@ function renderSettingsHtml() {
         </div>
         
         <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
-            Mark My Words v1.2.0<br>
+            Mark My Words v1.4.0<br>
             Sync enabled
         </div>
     </div>`;
