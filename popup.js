@@ -37,7 +37,9 @@ const DEFAULT_CONFIG = {
         words: ['React', 'Extension', 'highlight', 'code'],
         styles: { backgroundColor: '#6610f2', color: '#ffffff' },
         enabled: true,
-        options: { caseSensitive: false, wholeWord: true, isRegex: false }
+        options: { caseSensitive: false, wholeWord: true, isRegex: false, crossNode: false },
+        allowedDomains: [],
+        targetSelectors: []
     }],
     settings: {
         globalEnabled: true,
@@ -50,10 +52,11 @@ const DEFAULT_CONFIG = {
 // --- State ---
 let state = {
     config: DEFAULT_CONFIG,
-    activeView: 'dashboard', // 'dashboard' | 'editor' | 'settings'
+    activeView: 'dashboard', // 'dashboard' | 'editor' | 'settings' | 'summary'
     editingListId: null,
     searchQuery: '',
-    searchVisible: false
+    searchVisible: false,
+    summaryData: []
 };
 
 // --- Helpers ---
@@ -146,6 +149,8 @@ function render() {
         <div class="header-actions">
             ${state.activeView === 'dashboard' 
                 ? `<div class="action-group">
+                       <button class="btn btn-icon" id="btn-summary" title="Summary & Export" aria-label="Summary">${ICONS.download}</button>
+                       <div class="divider"></div>
                        <select id="auto-trigger-interval" style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; font-size: 0.7rem; cursor: pointer; outline: none;" title="Auto-trigger Rescan Interval">
                            <option value="Off" ${state.config.settings.autoTriggerInterval === 'Off' ? 'selected' : ''}>Off</option>
                            <option value="15s" ${state.config.settings.autoTriggerInterval === '15s' ? 'selected' : ''}>15s</option>
@@ -172,10 +177,12 @@ function render() {
         mainHtml = renderEditorHtml();
     } else if (state.activeView === 'settings') {
         mainHtml = renderSettingsHtml();
+    } else if (state.activeView === 'summary') {
+        mainHtml = renderSummaryHtml();
     }
 
     // Preview (Only show on Dashboard/Editor)
-    const previewHtml = state.activeView !== 'settings' ? renderPreviewHtml() : '';
+    const previewHtml = (state.activeView !== 'settings' && state.activeView !== 'summary') ? renderPreviewHtml() : '';
 
     app.innerHTML = `
         ${headerHtml}
@@ -307,7 +314,7 @@ function renderEditorHtml() {
             <input type="text" id="input-name" class="title-input" value="${escapeHtml(list.name)}" placeholder="Enter rule name...">
         </div>
 
-        <div class="options-grid">
+        <div class="options-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.5rem;">
             <div class="option-card ${list.options.caseSensitive ? 'active' : ''}" data-action="toggleOption" data-key="caseSensitive">
                 <span style="font-size: 1.25rem; margin-bottom: 2px;">Aa</span> Match Case
             </div>
@@ -316,6 +323,20 @@ function renderEditorHtml() {
             </div>
             <div class="option-card ${list.options.isRegex ? 'active' : ''}" data-action="toggleOption" data-key="isRegex">
                 <span style="font-size: 1.25rem; margin-bottom: 2px;">.*</span> Regex
+            </div>
+            <div class="option-card ${list.options.crossNode ? 'active' : ''}" data-action="toggleOption" data-key="crossNode">
+                <span style="font-size: 1.25rem; margin-bottom: 2px;">&lt;&gt;</span> Cross-Node (Slow)
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                <label class="label" style="font-size: 0.75rem;">Allowed Domains</label>
+                <textarea id="input-allowed-domains" class="word-input" rows="2" style="width: 100%; resize: vertical; font-size: 0.75rem;" placeholder="Leave empty for all...&#10;example.com">${(list.allowedDomains || []).join('\n')}</textarea>
+            </div>
+            <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                <label class="label" style="font-size: 0.75rem;">Target Selectors</label>
+                <textarea id="input-target-selectors" class="word-input" rows="2" style="width: 100%; resize: vertical; font-size: 0.75rem;" placeholder="Leave empty for all...&#10;article, .main">${(list.targetSelectors || []).join('\n')}</textarea>
             </div>
         </div>
 
@@ -358,7 +379,7 @@ function renderEditorHtml() {
             </div>
         </div>
 
-        <div class="input-group" style="margin-bottom: 0;">
+        <div class="input-group">
              <div class="flex justify-between items-center mb-2">
                 <div class="flex items-center gap-2">
                     <label class="label" style="margin:0">Keywords</label>
@@ -379,6 +400,12 @@ function renderEditorHtml() {
                 `).join('')}
                 ${list.words.length === 0 ? '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No keywords added yet.</span>' : ''}
             </div>
+        </div>
+
+        <div class="input-group" style="margin-bottom: 0;">
+            <label class="label">Live Match Tester</label>
+            <textarea id="live-test-input" class="word-input" rows="2" style="width: 100%; resize: vertical; margin-bottom: 0.5rem;" placeholder="Paste sample text here to test your rules..."></textarea>
+            <div id="live-test-output" style="background: var(--bg-main); border: 1px dashed var(--border); border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: var(--text-muted); min-height: 2.5rem; white-space: pre-wrap; word-break: break-word;"></div>
         </div>
     </div>`;
 }
@@ -434,6 +461,49 @@ function renderSettingsHtml() {
     </div>`;
 }
 
+function renderSummaryHtml() {
+    if (state.summaryData.length === 0) {
+        return `
+        <div class="editor-view" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
+            <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                ${ICONS.search}
+            </div>
+            <h3 style="margin: 0 0 0.5rem; font-size: 1.1rem;">No Matches Found</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Ensure the extension is active and rules are matched on the current page.</p>
+            <button id="btn-refresh-summary" class="btn btn-primary" style="margin-top: 1rem;">${ICONS.eye} Refresh</button>
+        </div>`;
+    }
+
+    const itemsHtml = state.summaryData.map(item => `
+        <div class="list-item" style="cursor: default; align-items: flex-start; padding: 0.75rem;">
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600; font-size: 0.9rem; color: white; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                    <span style="background: ${item.bgColor}; color: ${item.color}; padding: 0 4px; border-radius: 3px;">${escapeHtml(item.text)}</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; white-space: pre-wrap;">...${escapeHtml(item.context)}...</div>
+            </div>
+            <button class="btn btn-secondary btn-scroll" data-index="${item.index}" style="padding: 4px 8px; font-size: 0.7rem;">Scroll To</button>
+        </div>
+    `).join('');
+
+    return `
+    <div class="editor-view">
+        <div class="flex justify-between items-center mb-2">
+            <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">Summary</h2>
+            <div class="flex gap-2">
+                <button id="btn-refresh-summary" class="btn btn-icon" title="Refresh">${ICONS.eye}</button>
+                <button id="btn-export-csv" class="btn btn-secondary" style="font-size: 0.75rem;">${ICONS.download} Export CSV</button>
+            </div>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Found ${state.summaryData.length} matches on this page.
+        </div>
+        <div class="list-container">
+            ${itemsHtml}
+        </div>
+    </div>`;
+}
+
 function renderPreviewHtml() {
     const list = state.activeView === 'editor' ? state.config.lists.find(l => l.id === state.editingListId) : null;
     let sampleText = "Preview: Mark My Words makes it easy to style your web.";
@@ -471,6 +541,14 @@ function attachEvents() {
 
     const settingsBtn = document.getElementById('btn-settings');
     if (settingsBtn) settingsBtn.addEventListener('click', () => { state.activeView = 'settings'; render(); });
+
+    const summaryBtn = document.getElementById('btn-summary');
+    if (summaryBtn) {
+        summaryBtn.addEventListener('click', () => {
+            state.activeView = 'summary';
+            fetchSummaryData();
+        });
+    }
 
     const intervalSelect = document.getElementById('auto-trigger-interval');
     if (intervalSelect) {
@@ -597,10 +675,24 @@ function attachEvents() {
 
         const nameInput = document.getElementById('input-name');
         if (nameInput) {
-            // Update state on input to keep it fresh in memory
             nameInput.addEventListener('input', (e) => { list.name = e.target.value; });
-            // Save and re-render only when done editing (blur/enter)
             nameInput.addEventListener('change', () => { save(false); });
+        }
+
+        const allowedDomains = document.getElementById('input-allowed-domains');
+        if (allowedDomains) {
+            allowedDomains.addEventListener('change', (e) => {
+                list.allowedDomains = e.target.value.split('\n').map(s => s.trim()).filter(s => s);
+                save(false);
+            });
+        }
+
+        const targetSelectors = document.getElementById('input-target-selectors');
+        if (targetSelectors) {
+            targetSelectors.addEventListener('change', (e) => {
+                list.targetSelectors = e.target.value.split('\n').map(s => s.trim()).filter(s => s);
+                save(false);
+            });
         }
 
         document.querySelectorAll('.option-card').forEach(card => {
@@ -615,6 +707,7 @@ function attachEvents() {
                     card.classList.remove('active');
                 }
                 save(false);
+                if (typeof updateLiveTester === 'function') updateLiveTester();
             });
         });
         
@@ -639,6 +732,7 @@ function attachEvents() {
                 });
 
                 save(false);
+                if (typeof updateLiveTester === 'function') updateLiveTester();
             });
         }
 
@@ -662,9 +756,81 @@ function attachEvents() {
                 }
 
                 save(false);
+                if (typeof updateLiveTester === 'function') updateLiveTester();
             });
         });
         
+        const updateLiveTester = () => {
+            const input = document.getElementById('live-test-input');
+            const output = document.getElementById('live-test-output');
+            if (!input || !output) return;
+            const text = input.value;
+            if (!text) {
+                output.innerHTML = '';
+                return;
+            }
+
+            // Quick compile logic for this specific list
+            let regex = null;
+            try {
+                let patternSource;
+                if (list.options.isRegex) {
+                    const valid = list.words.filter(w => {
+                        try { new RegExp(w); return true; } catch { return false; }
+                    });
+                    if (valid.length > 0) {
+                        patternSource = `(${valid.join('|')})`;
+                    }
+                } else {
+                    if (list.words.length > 0) {
+                        const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')).join('|');
+                        patternSource = list.options.wholeWord ? `\\b(${escaped})\\b` : `(${escaped})`;
+                    }
+                }
+                if (patternSource) {
+                    regex = new RegExp(patternSource, list.options.caseSensitive ? 'g' : 'gi');
+                }
+            } catch (e) { regex = null; }
+
+            if (!regex) {
+                output.textContent = text;
+                return;
+            }
+
+            let ranges = [];
+            for (const match of text.matchAll(regex)) {
+                if (match[0].length === 0) continue;
+                ranges.push({ start: match.index, end: match.index + match[0].length });
+            }
+
+            if (ranges.length === 0) {
+                output.textContent = text;
+                return;
+            }
+
+            // Simple replace
+            let resultHtml = '';
+            let cursor = 0;
+            const styleString = `background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; border-radius: 4px; padding: 0 2px; font-weight: ${list.styles.bold ? 'bold' : 'inherit'}; font-style: ${list.styles.italic ? 'italic' : 'inherit'}; text-decoration: ${list.styles.strikeThrough ? 'line-through' : 'inherit'}`;
+
+            ranges.forEach(r => {
+                if (r.start > cursor) {
+                    resultHtml += escapeHtml(text.substring(cursor, r.start));
+                }
+                resultHtml += `<mark style="${styleString}">${escapeHtml(text.substring(r.start, r.end))}</mark>`;
+                cursor = r.end;
+            });
+            if (cursor < text.length) {
+                resultHtml += escapeHtml(text.substring(cursor));
+            }
+            output.innerHTML = resultHtml;
+        };
+
+        const liveTestInput = document.getElementById('live-test-input');
+        if (liveTestInput) {
+            liveTestInput.addEventListener('input', updateLiveTester);
+        }
+
         const textPicker = document.getElementById('custom-text-picker');
         if (textPicker) {
             textPicker.addEventListener('input', (e) => {
@@ -675,6 +841,7 @@ function attachEvents() {
                 if (previewSpan) previewSpan.style.color = list.styles.color;
 
                 save(false);
+                updateLiveTester();
             });
         }
 
@@ -709,6 +876,7 @@ function attachEvents() {
                 });
 
                 save(false);
+                if (typeof updateLiveTester === 'function') updateLiveTester();
             });
         });
 
@@ -725,6 +893,7 @@ function attachEvents() {
                 if (confirm('Are you sure you want to remove all keywords from this list?')) {
                     list.words = [];
                     save();
+                    // Will re-render entirely, but we need to rebind tester logic via render
                 }
             });
         }
@@ -766,6 +935,7 @@ function attachEvents() {
                     input.value = ''; 
                     
                     save(false); // Skip render
+                    if (typeof updateLiveTester === 'function') updateLiveTester();
                 } else {
                     input.value = ''; 
                 }
@@ -917,6 +1087,71 @@ function attachEvents() {
             });
         }
     }
+
+    // 5. Summary View Interactions
+    if (state.activeView === 'summary') {
+        const refreshSummaryBtn = document.getElementById('btn-refresh-summary');
+        if (refreshSummaryBtn) {
+            refreshSummaryBtn.addEventListener('click', fetchSummaryData);
+        }
+
+        const exportCsvBtn = document.getElementById('btn-export-csv');
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', () => {
+                if (state.summaryData.length === 0) return showToast('No data to export.', 'info');
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "Text,Context\n";
+                state.summaryData.forEach(item => {
+                    const text = item.text.replace(/"/g, '""');
+                    const context = item.context.replace(/"/g, '""').replace(/\n/g, " ");
+                    csvContent += `"${text}","${context}"\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const a = document.createElement('a');
+                a.href = encodedUri;
+                a.download = `highlight-summary-${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+            });
+        }
+
+        document.querySelectorAll('.btn-scroll').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = btn.dataset.index;
+                chrome.tabs?.query({active: true, currentWindow: true}, function(tabs) {
+                    if (tabs[0]?.id) {
+                        chrome.tabs.sendMessage(tabs[0].id, { action: "scroll_to_mark", index: parseInt(index) });
+                    }
+                });
+            });
+        });
+    }
+}
+
+function fetchSummaryData() {
+    if (typeof chrome !== 'undefined' && chrome.tabs) {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            if (tabs[0]?.id) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: "get_summary" }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        state.summaryData = [];
+                        render();
+                        return;
+                    }
+                    state.summaryData = response?.data || [];
+                    render();
+                });
+            } else {
+                state.summaryData = [];
+                render();
+            }
+        });
+    } else {
+        // Mock data for dev
+        state.summaryData = [];
+        render();
+    }
 }
 
 function showToast(message, type = 'info') {
@@ -985,6 +1220,13 @@ function handleRemoveWord(list, word, tagElement) {
             container.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">No keywords added yet.</span>';
     }
     save(false);
+
+    // Attempt to update live tester if we're in editor view
+    const input = document.getElementById('live-test-input');
+    if (input) {
+        // Trigger input event to re-evaluate the tester
+        input.dispatchEvent(new Event('input'));
+    }
 }
 
 function createList() {
@@ -994,7 +1236,9 @@ function createList() {
         words: [],
         styles: { backgroundColor: '#6610f2', color: '#ffffff' },
         enabled: true,
-        options: { caseSensitive: false, wholeWord: true, isRegex: false }
+        options: { caseSensitive: false, wholeWord: true, isRegex: false, crossNode: false },
+        allowedDomains: [],
+        targetSelectors: []
     };
     state.config.lists.push(newList);
     state.lastCreatedId = newList.id; // Mark for animation

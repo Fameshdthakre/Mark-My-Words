@@ -33,8 +33,54 @@ function init() {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === "refresh_highlights") {
             refreshConfig();
+        } else if (request.action === "get_summary") {
+            sendResponse({ data: generateSummaryData() });
+        } else if (request.action === "scroll_to_mark") {
+            const marks = document.querySelectorAll('mark.highlight-pro-ext');
+            const target = marks[request.index];
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Flash effect
+                const originalBg = target.style.backgroundColor;
+                target.style.transition = 'background-color 0.3s';
+                target.style.backgroundColor = 'white';
+                setTimeout(() => { target.style.backgroundColor = originalBg; }, 500);
+            }
         }
     });
+}
+
+function generateSummaryData() {
+    const marks = document.querySelectorAll('mark.highlight-pro-ext');
+    const data = [];
+
+    marks.forEach((mark, index) => {
+        // Extract 40 chars of surrounding context
+        let contextText = "";
+        let parent = mark.parentElement;
+        if (parent) {
+            // Get full text of parent paragraph/div, limit to 80 chars around match
+            let fullText = parent.textContent.replace(/\s+/g, ' ').trim();
+            let matchIndex = fullText.indexOf(mark.textContent.trim());
+            if (matchIndex === -1) matchIndex = 0; // fallback
+
+            let start = Math.max(0, matchIndex - 40);
+            let end = Math.min(fullText.length, matchIndex + mark.textContent.length + 40);
+            contextText = fullText.substring(start, end);
+        } else {
+            contextText = mark.textContent;
+        }
+
+        data.push({
+            index: index,
+            text: mark.textContent,
+            context: contextText,
+            bgColor: mark.style.backgroundColor,
+            color: mark.style.color
+        });
+    });
+
+    return data;
 }
 
 function refreshConfig() {
@@ -117,7 +163,16 @@ function compileLists(config) {
     }
 
     return config.lists
-        .filter(l => l.enabled)
+        .filter(l => {
+            if (!l.enabled) return false;
+            // Check List-specific Allowed Domains
+            if (l.allowedDomains && l.allowedDomains.length > 0) {
+                const currentDomain = window.location.hostname;
+                const isAllowed = l.allowedDomains.some(domain => currentDomain.includes(domain));
+                if (!isAllowed) return false;
+            }
+            return true;
+        })
         .map((list, index) => {
             try {
                 let patternSource;
@@ -129,7 +184,7 @@ function compileLists(config) {
                     patternSource = `(${valid.join('|')})`;
                 } else {
                     if (list.words.length === 0) return null;
-                    const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+                    const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')).join('|');
                     patternSource = list.options.wholeWord ? `\\b(${escaped})\\b` : `(${escaped})`;
                 }
                 
@@ -137,7 +192,9 @@ function compileLists(config) {
                     regex: new RegExp(patternSource, list.options.caseSensitive ? 'g' : 'gi'),
                     styles: list.styles,
                     priority: index, // Lower index = Higher Priority (Top of list)
-                    id: list.id
+                    id: list.id,
+                    targetSelectors: list.targetSelectors || [],
+                    crossNode: list.options.crossNode || false
                 };
             } catch (e) { return null; }
         })
@@ -169,15 +226,87 @@ function applyHighlights() {
 
     let highlightCount = 0;
 
+    // --- Phase 1: Cross-Node Matching ---
+    const crossNodeLists = cachedState.compiledLists.filter(l => l.crossNode);
+    let crossNodeMatchesByNode = new Map(); // Maps node -> Array of ranges
+
+    if (crossNodeLists.length > 0) {
+        let fullText = "";
+        let nodeMap = []; // Array of {node, start, end}
+
+        textNodes.forEach(node => {
+            const start = fullText.length;
+            fullText += node.nodeValue;
+            nodeMap.push({ node: node, start: start, end: fullText.length });
+        });
+
+        const fullTextForMatching = fullText.replace(/\u00A0/g, ' ');
+
+        crossNodeLists.forEach(list => {
+            for (const match of fullTextForMatching.matchAll(list.regex)) {
+                if (match[0].length === 0) continue;
+
+                const matchStart = match.index;
+                const matchEnd = match.index + match[0].length;
+
+                // Find intersecting nodes
+                const intersectingNodes = nodeMap.filter(nm => nm.end > matchStart && nm.start < matchEnd);
+
+                intersectingNodes.forEach(nm => {
+                    // Check Target Selectors per Node
+                    if (list.targetSelectors.length > 0) {
+                        let allowed = false;
+                        for (let sel of list.targetSelectors) {
+                            if (nm.node.parentNode.closest(sel)) {
+                                allowed = true;
+                                break;
+                            }
+                        }
+                        if (!allowed) return; // Skip this node for this match
+                    }
+
+                    const localStart = Math.max(0, matchStart - nm.start);
+                    const localEnd = Math.min(nm.node.nodeValue.length, matchEnd - nm.start);
+
+                    if (!crossNodeMatchesByNode.has(nm.node)) {
+                        crossNodeMatchesByNode.set(nm.node, []);
+                    }
+
+                    crossNodeMatchesByNode.get(nm.node).push({
+                        start: localStart,
+                        end: localEnd,
+                        length: localEnd - localStart,
+                        style: list.styles,
+                        priority: list.priority
+                    });
+                });
+            }
+        });
+    }
+
+    // --- Phase 2: Standard Matching & Application ---
     textNodes.forEach(node => {
         if (!node.nodeValue.trim()) return;
         
         const text = node.nodeValue;
         const textForMatching = text.replace(/\u00A0/g, ' ');
-        let ranges = [];
+        let ranges = crossNodeMatchesByNode.get(node) || [];
 
-        // Find matches for all lists
-        cachedState.compiledLists.forEach(list => {
+        // Standard Single-Node Lists
+        const standardLists = cachedState.compiledLists.filter(l => !l.crossNode);
+        standardLists.forEach(list => {
+            // Check Target Selectors per Node
+            if (list.targetSelectors.length > 0) {
+                let allowed = false;
+                for (let sel of list.targetSelectors) {
+                    if (node.parentNode.closest(sel)) {
+                        allowed = true;
+                        break;
+                    }
+                }
+                if (!allowed) return;
+            }
+
             for (const match of textForMatching.matchAll(list.regex)) {
                 if (match[0].length === 0) continue;
                 ranges.push({
@@ -193,7 +322,6 @@ function applyHighlights() {
         if (ranges.length === 0) return;
 
         // Resolve Overlaps
-        // Sort: Start Position (asc) -> Priority (asc/lower index wins) -> Length (desc/longest wins)
         ranges.sort((a, b) => {
             if (a.start !== b.start) return a.start - b.start;
             if (a.priority !== b.priority) return a.priority - b.priority;
