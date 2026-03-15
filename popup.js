@@ -774,16 +774,26 @@ function attachEvents() {
             let regex = null;
             try {
                 let patternSource;
+
+                // Merge active list.words with what is currently being typed in #new-word-input
+                const newWordInput = document.getElementById('new-word-input');
+                const currentlyTyping = newWordInput ? newWordInput.value.trim() : "";
+
+                const allWords = [...list.words];
+                if (currentlyTyping && !allWords.includes(currentlyTyping)) {
+                    allWords.push(currentlyTyping);
+                }
+
                 if (list.options.isRegex) {
-                    const valid = list.words.filter(w => {
+                    const valid = allWords.filter(w => {
                         try { new RegExp(w); return true; } catch { return false; }
                     });
                     if (valid.length > 0) {
                         patternSource = `(${valid.join('|')})`;
                     }
                 } else {
-                    if (list.words.length > 0) {
-                        const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')).join('|');
+                    if (allWords.length > 0) {
+                        const escaped = allWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')).join('|');
                         patternSource = list.options.wholeWord ? `\\b(${escaped})\\b` : `(${escaped})`;
                     }
                 }
@@ -944,12 +954,14 @@ function attachEvents() {
         
         const newInput = document.getElementById('new-word-input');
         if (newInput) {
-            // Regex Validation
+            // Regex Validation & Live Tester trigger
             newInput.addEventListener('input', (e) => {
                 const val = e.target.value;
                 const btn = document.getElementById('btn-add-word');
                 const errorMsg = document.getElementById('regex-error-msg');
                 
+                if (typeof updateLiveTester === 'function') updateLiveTester();
+
                 if (list.options.isRegex && val) {
                     try {
                         new RegExp(val);
@@ -1100,7 +1112,7 @@ function attachEvents() {
             exportCsvBtn.addEventListener('click', () => {
                 if (state.summaryData.length === 0) return showToast('No data to export.', 'info');
 
-                let csvContent = "data:text/csv;charset=utf-8,";
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
                 csvContent += "Text,Context\n";
                 state.summaryData.forEach(item => {
                     const text = item.text.replace(/"/g, '""');

@@ -157,7 +157,7 @@ function compileLists(config) {
     if (config.settings?.excludedDomains) {
         const currentDomain = window.location.hostname;
         const isExcluded = config.settings.excludedDomains.some(domain => 
-            currentDomain.includes(domain)
+            currentDomain === domain || currentDomain.endsWith(`.${domain}`)
         );
         if (isExcluded) return [];
     }
@@ -168,7 +168,9 @@ function compileLists(config) {
             // Check List-specific Allowed Domains
             if (l.allowedDomains && l.allowedDomains.length > 0) {
                 const currentDomain = window.location.hostname;
-                const isAllowed = l.allowedDomains.some(domain => currentDomain.includes(domain));
+                const isAllowed = l.allowedDomains.some(domain =>
+                    currentDomain === domain || currentDomain.endsWith(`.${domain}`)
+                );
                 if (!isAllowed) return false;
             }
             return true;
@@ -382,7 +384,7 @@ function applyHighlights() {
     updateBadge(highlightCount);
 }
 
-const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE']);
+const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE', 'SELECT', 'OPTION', 'CANVAS', 'SVG', 'AUDIO', 'VIDEO']);
 
 function getTextNodes() {
     const walker = document.createTreeWalker(
@@ -397,6 +399,17 @@ function getTextNodes() {
                     if (node.isContentEditable) return NodeFilter.FILTER_REJECT;
                     if (node.classList && node.classList.contains('highlight-pro-ext')) {
                         return NodeFilter.FILTER_REJECT;
+                    }
+                    // Filter out hidden elements for performance
+                    if (node.checkVisibility) {
+                        if (!node.checkVisibility({checkOpacity: true, checkVisibilityCSS: true})) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                    } else {
+                        // Fallback for older browsers
+                        if (node.offsetWidth === 0 || node.offsetHeight === 0) {
+                             return NodeFilter.FILTER_REJECT;
+                        }
                     }
                     return NodeFilter.FILTER_SKIP;
                 }
