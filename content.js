@@ -61,7 +61,7 @@ function refreshConfig() {
         // Setup Observer if active
         if (cachedState.isActive) {
             if (!observer) {
-                observer = new MutationObserver(debounce(applyHighlights, 1000));
+                observer = new MutationObserver(debounce(applyHighlights, 100));
                 observer.observe(document.body, { childList: true, subtree: true });
             }
         } else {
@@ -170,13 +170,13 @@ function applyHighlights() {
         if (!node.nodeValue.trim()) return;
         
         const text = node.nodeValue;
+        const textForMatching = text.replace(/\u00A0/g, ' ');
         let ranges = [];
 
         // Find matches for all lists
         cachedState.compiledLists.forEach(list => {
-            list.regex.lastIndex = 0;
-            let match;
-            while ((match = list.regex.exec(text)) !== null) {
+            for (const match of textForMatching.matchAll(list.regex)) {
+                if (match[0].length === 0) continue;
                 ranges.push({
                     start: match.index,
                     end: match.index + match[0].length,
@@ -251,20 +251,23 @@ function applyHighlights() {
     updateBadge(highlightCount);
 }
 
+const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE']);
+
 function getTextNodes() {
     const walker = document.createTreeWalker(
         document.body,
-        NodeFilter.SHOW_TEXT,
+        NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
         {
             acceptNode: (node) => {
-                const tag = node.parentNode.tagName;
-                if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE'].includes(tag)) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-                if (node.parentNode.isContentEditable) return NodeFilter.FILTER_REJECT;
-                // Avoid highlighting inside our own marks if they weren't cleaned up for some reason
-                if (node.parentNode.classList && node.parentNode.classList.contains('highlight-pro-ext')) {
-                    return NodeFilter.FILTER_REJECT;
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (SKIP_TAGS.has(node.tagName)) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (node.isContentEditable) return NodeFilter.FILTER_REJECT;
+                    if (node.classList && node.classList.contains('highlight-pro-ext')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
                 }
                 return NodeFilter.FILTER_ACCEPT;
             }
@@ -273,7 +276,9 @@ function getTextNodes() {
 
     const nodes = [];
     let node;
-    while (node = walker.nextNode()) nodes.push(node);
+    while ((node = walker.nextNode())) {
+        nodes.push(node);
+    }
     return nodes;
 }
 
