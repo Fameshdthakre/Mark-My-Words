@@ -42,7 +42,8 @@ const DEFAULT_CONFIG = {
     settings: {
         globalEnabled: true,
         excludedDomains: [],
-        performanceMode: false
+        performanceMode: false,
+        autoTriggerInterval: 'Off'
     }
 };
 
@@ -145,6 +146,12 @@ function render() {
         <div class="header-actions">
             ${state.activeView === 'dashboard' 
                 ? `<div class="action-group">
+                       <select id="auto-trigger-interval" style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; font-size: 0.7rem; cursor: pointer; outline: none;" title="Auto-trigger Rescan Interval">
+                           <option value="Off" ${state.config.settings.autoTriggerInterval === 'Off' ? 'selected' : ''}>Off</option>
+                           <option value="1m" ${state.config.settings.autoTriggerInterval === '1m' ? 'selected' : ''}>1m</option>
+                           <option value="5m" ${state.config.settings.autoTriggerInterval === '5m' ? 'selected' : ''}>5m</option>
+                           <option value="1h" ${state.config.settings.autoTriggerInterval === '1h' ? 'selected' : ''}>1hr</option>
+                       </select>
                        <button class="btn btn-icon" id="btn-refresh" title="Re-scan Page" aria-label="Re-scan Page">${ICONS.eye}</button>
                        <div class="divider"></div>
                        <button class="btn btn-icon" id="btn-settings" title="Settings" aria-label="Settings">${ICONS.settings}</button>
@@ -335,6 +342,17 @@ function renderEditorHtml() {
                     </div>
                 </div>
             </div>
+            <div class="options-grid" style="margin-top: 1rem;">
+                <div class="option-card ${list.styles.bold ? 'active' : ''}" data-action="toggleStyle" data-key="bold">
+                    <span style="font-size: 1.25rem; margin-bottom: 2px;"><strong>B</strong></span> Bold
+                </div>
+                <div class="option-card ${list.styles.italic ? 'active' : ''}" data-action="toggleStyle" data-key="italic">
+                    <span style="font-size: 1.25rem; margin-bottom: 2px;"><em>I</em></span> Italic
+                </div>
+                <div class="option-card ${list.styles.strikeThrough ? 'active' : ''}" data-action="toggleStyle" data-key="strikeThrough">
+                    <span style="font-size: 1.25rem; margin-bottom: 2px;"><del>S</del></span> Strike
+                </div>
+            </div>
         </div>
 
         <div class="input-group" style="margin-bottom: 0;">
@@ -407,7 +425,7 @@ function renderSettingsHtml() {
         </div>
         
         <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
-            Mark My Words v1.3.0<br>
+            Mark My Words v1.2.0<br>
             Sync enabled
         </div>
     </div>`;
@@ -418,7 +436,11 @@ function renderPreviewHtml() {
     let sampleText = "Preview: Mark My Words makes it easy to style your web.";
     
     if (list) {
-         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Mark My Words</span>`;
+         const boldStyle = list.styles.bold ? 'font-weight: bold;' : '';
+         const italicStyle = list.styles.italic ? 'font-style: italic;' : '';
+         const strikeStyle = list.styles.strikeThrough ? 'text-decoration: line-through;' : '';
+         
+         const hl = `<span style="background-color: ${list.styles.backgroundColor}; color: ${list.styles.color}; padding: 0 4px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); ${boldStyle} ${italicStyle} ${strikeStyle}">Mark My Words</span>`;
          sampleText = `Preview: ${hl} makes it easy to style your web.`;
     }
 
@@ -446,6 +468,14 @@ function attachEvents() {
 
     const settingsBtn = document.getElementById('btn-settings');
     if (settingsBtn) settingsBtn.addEventListener('click', () => { state.activeView = 'settings'; render(); });
+
+    const intervalSelect = document.getElementById('auto-trigger-interval');
+    if (intervalSelect) {
+        intervalSelect.addEventListener('change', (e) => {
+            state.config.settings.autoTriggerInterval = e.target.value;
+            save(false);
+        });
+    }
 
     const refreshBtn = document.getElementById('btn-refresh');
     if (refreshBtn) {
@@ -608,6 +638,29 @@ function attachEvents() {
                 save(false);
             });
         }
+
+        document.querySelectorAll('[data-action="toggleStyle"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.key;
+                list.styles[key] = !list.styles[key];
+                
+                // Manual visual update for smoother feel
+                if (list.styles[key]) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+
+                const previewSpan = document.querySelector('.preview-box span');
+                if (previewSpan) {
+                    if (key === 'bold') previewSpan.style.fontWeight = list.styles.bold ? 'bold' : 'normal';
+                    if (key === 'italic') previewSpan.style.fontStyle = list.styles.italic ? 'italic' : 'normal';
+                    if (key === 'strikeThrough') previewSpan.style.textDecoration = list.styles.strikeThrough ? 'line-through' : 'none';
+                }
+
+                save(false);
+            });
+        });
         
         const textPicker = document.getElementById('custom-text-picker');
         if (textPicker) {

@@ -14,6 +14,7 @@ let cachedState = {
 };
 
 let observer = null;
+let autoTriggerIntervalId = null;
 
 // --- Initialization ---
 
@@ -70,6 +71,29 @@ function refreshConfig() {
             }
             removeAllHighlights();
             updateBadge(0);
+        }
+
+        // Handle auto-trigger interval
+        if (autoTriggerIntervalId) {
+            clearInterval(autoTriggerIntervalId);
+            autoTriggerIntervalId = null;
+        }
+
+        if (cachedState.isActive && config.settings?.autoTriggerInterval && config.settings.autoTriggerInterval !== 'Off') {
+            let intervalMs = null;
+            switch (config.settings.autoTriggerInterval) {
+                case '1m': intervalMs = 60 * 1000; break;
+                case '5m': intervalMs = 5 * 60 * 1000; break;
+                case '1h': intervalMs = 60 * 60 * 1000; break;
+            }
+
+            if (intervalMs) {
+                autoTriggerIntervalId = setInterval(() => {
+                    if (document.visibilityState === 'visible') {
+                        applyHighlights();
+                    }
+                }, intervalMs);
+            }
         }
     });
 }
@@ -204,7 +228,10 @@ function applyHighlights() {
                     borderRadius: '4px',
                     padding: '0 2px',
                     boxShadow: `0 0 0 1px ${range.style.backgroundColor}40`,
-                    fontInherit: 'true'
+                    fontInherit: 'true',
+                    fontWeight: range.style.bold ? 'bold' : 'inherit',
+                    fontStyle: range.style.italic ? 'italic' : 'inherit',
+                    textDecoration: range.style.strikeThrough ? 'line-through' : 'inherit'
                 });
                 span.textContent = text.substring(range.start, range.end);
                 
