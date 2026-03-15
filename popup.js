@@ -148,6 +148,9 @@ function render() {
                 ? `<div class="action-group">
                        <select id="auto-trigger-interval" style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; font-size: 0.7rem; cursor: pointer; outline: none;" title="Auto-trigger Rescan Interval">
                            <option value="Off" ${state.config.settings.autoTriggerInterval === 'Off' ? 'selected' : ''}>Off</option>
+                           <option value="15s" ${state.config.settings.autoTriggerInterval === '15s' ? 'selected' : ''}>15s</option>
+                           <option value="30s" ${state.config.settings.autoTriggerInterval === '30s' ? 'selected' : ''}>30s</option>
+                           <option value="45s" ${state.config.settings.autoTriggerInterval === '45s' ? 'selected' : ''}>45s</option>
                            <option value="1m" ${state.config.settings.autoTriggerInterval === '1m' ? 'selected' : ''}>1m</option>
                            <option value="5m" ${state.config.settings.autoTriggerInterval === '5m' ? 'selected' : ''}>5m</option>
                            <option value="1h" ${state.config.settings.autoTriggerInterval === '1h' ? 'selected' : ''}>1hr</option>

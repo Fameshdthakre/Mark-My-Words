@@ -82,6 +82,9 @@ function refreshConfig() {
         if (cachedState.isActive && config.settings?.autoTriggerInterval && config.settings.autoTriggerInterval !== 'Off') {
             let intervalMs = null;
             switch (config.settings.autoTriggerInterval) {
+                case '15s': intervalMs = 15 * 1000; break;
+                case '30s': intervalMs = 30 * 1000; break;
+                case '45s': intervalMs = 45 * 1000; break;
                 case '1m': intervalMs = 60 * 1000; break;
                 case '5m': intervalMs = 5 * 60 * 1000; break;
                 case '1h': intervalMs = 60 * 60 * 1000; break;
