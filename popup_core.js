@@ -46,8 +46,22 @@ let state = {
     summaryData: [],
     pageRuleCounts: {},
     analyticsTab: 'current',
-    pageAnalytics: { totalHighlights: 0, ruleUsage: {} }
+    pageAnalytics: { totalHighlights: 0, ruleUsage: {} },
+    version: chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : 'Unknown'
 };
+
+if (!chrome.runtime?.getManifest) {
+    fetch('manifest.json')
+        .then(response => response.json())
+        .then(data => {
+            if (data.version) {
+                state.version = data.version;
+                if (typeof render === 'function') render();
+            }
+        })
+        .catch(err => console.error("Could not fetch manifest.json for version fallback"));
+}
+
 
 // --- Helpers ---
 function escapeHtml(text) {

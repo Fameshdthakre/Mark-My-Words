@@ -68,8 +68,6 @@ function render() {
         document.body.appendChild(tc);
     }
 
-    const manifest = chrome.runtime?.getManifest ? chrome.runtime.getManifest() : { name: 'Mark My Words', version: '1.7.0' };
-    const version = manifest.version;
 
     // Header
     const headerHtml = `
@@ -77,7 +75,7 @@ function render() {
         <div class="flex items-center">
             <div class="logo-box">${ICONS.zap}</div>
             <div>
-                <h1 class="app-title">Mark My Words <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">v${version}</span></h1>
+                <h1 class="app-title">Mark My Words <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">v${state.version}</span></h1>
                 <div class="status-badge">
                     <div class="status-dot" style="background-color: ${state.config.settings.globalEnabled ? 'var(--accent)' : 'var(--text-muted)'}"></div>
                     ${state.config.settings.globalEnabled ? 'Active' : 'Paused'}
@@ -476,7 +474,7 @@ function renderSettingsHtml() {
         </div>
 
         <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
-            Mark My Words v${version}<br>
+            Mark My Words v${state.version}<br>
             Sync enabled
         </div>
     </div>`;
