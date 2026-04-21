@@ -68,7 +68,7 @@ function render() {
         document.body.appendChild(tc);
     }
 
-    const manifest = chrome.runtime?.getManifest ? chrome.runtime.getManifest() : { name: 'Mark My Words', version: '1.6.0' };
+    const manifest = chrome.runtime?.getManifest ? chrome.runtime.getManifest() : { name: 'Mark My Words', version: '1.7.0' };
     const version = manifest.version;
 
     // Header
@@ -476,7 +476,7 @@ function renderSettingsHtml() {
         </div>
 
         <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
-            Mark My Words v${chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : '1.6.0'}<br>
+            Mark My Words v${version}<br>
             Sync enabled
         </div>
     </div>`;
