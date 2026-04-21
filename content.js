@@ -16,6 +16,8 @@ let cachedState = {
 let observer = null;
 let autoTriggerIntervalId = null;
 let activeRangesMeta = [];
+let lastHighlightCount = 0;
+let lastRuleUsage = {};
 
 // --- Initialization ---
 
@@ -114,7 +116,7 @@ function refreshConfig() {
 
         if (cachedState.isActive) {
             if (!observer) {
-                observer = new MutationObserver(debounce(applyHighlights, 250));
+                observer = new MutationObserver(debounce(applyHighlights, 100));
                 observer.observe(document.body, { childList: true, subtree: true });
             }
         } else {
@@ -334,8 +336,25 @@ function applyHighlights() {
         });
     }
 
+    // Calculate deltas for analytics
+    let deltaCount = Math.max(0, highlightCount - lastHighlightCount);
+    let deltaRuleUsage = {};
+
+    Object.entries(ruleUsage).forEach(([rule, count]) => {
+        let lastCount = lastRuleUsage[rule] || 0;
+        let delta = Math.max(0, count - lastCount);
+        if (delta > 0) {
+            deltaRuleUsage[rule] = delta;
+        }
+    });
+
+    lastHighlightCount = highlightCount;
+    lastRuleUsage = ruleUsage;
+
     updateBadge(highlightCount);
-    updateAnalytics(highlightCount, ruleUsage);
+    if (deltaCount > 0) {
+        updateAnalytics(deltaCount, deltaRuleUsage);
+    }
 }
 
 function injectHighlightStyles() {

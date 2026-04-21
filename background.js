@@ -3,68 +3,51 @@
 const STORAGE_KEY = 'highlighter_config_v4';
 
 // 1. Initialize Context Menus
-let isUpdatingMenus = false;
-let pendingMenuUpdate = false;
+let menuUpdatePromise = Promise.resolve();
 
 function updateContextMenus() {
-    if (isUpdatingMenus) {
-        pendingMenuUpdate = true;
-        return;
-    }
-    isUpdatingMenus = true;
-    pendingMenuUpdate = false;
-
-    chrome.contextMenus.removeAll(() => {
-        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+    menuUpdatePromise = menuUpdatePromise.then(async () => {
+        try {
+            await new Promise(resolve => chrome.contextMenus.removeAll(resolve));
+            const result = await chrome.storage.sync.get([STORAGE_KEY]);
             const config = result[STORAGE_KEY];
-            
-            const onMenuCreated = () => {
-                let _ = chrome.runtime.lastError; // Ignore unchecked errors
-            };
 
             if (!config || !config.lists || config.lists.length === 0) {
-                // No lists available
-                chrome.contextMenus.create({
-                    id: "no-lists",
-                    title: "No highlight lists active",
-                    contexts: ["selection"],
-                    enabled: false
-                }, onMenuCreated);
-                finishMenuUpdate();
+                await new Promise(resolve => {
+                    chrome.contextMenus.create({
+                        id: "no-lists",
+                        title: "No highlight lists active",
+                        contexts: ["selection"],
+                        enabled: false
+                    }, () => { let _ = chrome.runtime.lastError; resolve(); });
+                });
                 return;
             }
 
-            // Create Parent Menu
             const activeLists = config.lists.filter(l => l.enabled);
-            
-            chrome.contextMenus.create({
-                id: "highlight-selection",
-                title: "Highlight '%s'",
-                contexts: ["selection"]
-            }, () => {
-                let _ = chrome.runtime.lastError; // Ignore unchecked errors
-                
-                // Create Sub-menus for each list
-                activeLists.forEach(list => {
+
+            await new Promise(resolve => {
+                chrome.contextMenus.create({
+                    id: "highlight-selection",
+                    title: "Highlight '%s'",
+                    contexts: ["selection"]
+                }, () => { let _ = chrome.runtime.lastError; resolve(); });
+            });
+
+            for (const list of activeLists) {
+                await new Promise(resolve => {
                     chrome.contextMenus.create({
                         id: `add-to-${list.id}`,
                         parentId: "highlight-selection",
                         title: `Add to "${list.name}"`,
                         contexts: ["selection"]
-                    }, onMenuCreated);
+                    }, () => { let _ = chrome.runtime.lastError; resolve(); });
                 });
-                
-                finishMenuUpdate();
-            });
-        });
+            }
+        } catch (error) {
+            console.error("Error updating context menus:", error);
+        }
     });
-}
-
-function finishMenuUpdate() {
-    isUpdatingMenus = false;
-    if (pendingMenuUpdate) {
-        updateContextMenus();
-    }
 }
 
 // 2. Handle Clicks
