@@ -126,6 +126,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
+// 5. Handle Keyboard Commands
+chrome.commands.onCommand.addListener((command) => {
+    if (command === "toggle-extension") {
+        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+            const config = result[STORAGE_KEY];
+            if (config && config.settings) {
+                config.settings.globalEnabled = !config.settings.globalEnabled;
+                chrome.storage.sync.set({ [STORAGE_KEY]: config });
+            }
+        });
+    } else if (command === "add-to-list") {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0] && tabs[0].id) {
+                chrome.scripting.executeScript(
+                    {
+                        target: { tabId: tabs[0].id },
+                        func: () => window.getSelection().toString().trim(),
+                    },
+                    (results) => {
+                        if (chrome.runtime.lastError || !results || !results[0] || !results[0].result) return;
+                        
+                        const text = results[0].result;
+                        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+                            const config = result[STORAGE_KEY];
+                            if (config && config.lists && config.lists.length > 0) {
+                                // Add to the first enabled list, or first overall
+                                const targetList = config.lists.find(l => l.enabled) || config.lists[0];
+                                if (!targetList.words.includes(text)) {
+                                    targetList.words.push(text);
+                                    chrome.storage.sync.set({ [STORAGE_KEY]: config });
+                                }
+                            }
+                        });
+                    }
+                );
+            }
+        });
+    }
+});
+
 // Initial Setup
 chrome.runtime.onInstalled.addListener(updateContextMenus);
 chrome.runtime.onStartup.addListener(updateContextMenus);

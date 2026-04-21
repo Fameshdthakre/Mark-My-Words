@@ -1,7 +1,7 @@
 /**
  * Content Script: content.js
- * V4 Update: Uses chrome.storage.sync and new Settings logic
- * Optimized for performance: Cached config, batched DOM updates, minimal layout thrashing.
+ * V5 Update: Uses CSS Custom Highlight API, Interactive Tooltips, Analytics
+ * Optimized for performance: Zero DOM mutation, Range-based highlighting.
  */
 
 const STORAGE_KEY = 'highlighter_config_v4';
@@ -15,53 +15,106 @@ let cachedState = {
 
 let observer = null;
 let autoTriggerIntervalId = null;
+let activeRangesMeta = [];
 
 // --- Initialization ---
 
 function init() {
-    // Initial Load
     refreshConfig();
 
-    // Listen for storage changes
     chrome.storage.onChanged.addListener((changes, namespace) => {
         if (namespace === 'sync' && changes[STORAGE_KEY]) {
             refreshConfig();
         }
     });
 
-    // Listen for runtime messages (e.g. from popup)
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === "refresh_highlights") {
             refreshConfig();
+        } else if (request.action === "get_summary") {
+            sendResponse({ data: generateSummaryData() });
+        } else if (request.action === "get_page_rule_counts") {
+            const counts = {};
+            activeRangesMeta.forEach(meta => {
+                counts[meta.id] = (counts[meta.id] || 0) + 1;
+            });
+            sendResponse({ counts: counts });
+        } else if (request.action === "get_page_analytics") {
+            const ruleUsage = {};
+            activeRangesMeta.forEach(meta => {
+                ruleUsage[meta.ruleName] = (ruleUsage[meta.ruleName] || 0) + 1;
+            });
+            sendResponse({ analytics: { totalHighlights: activeRangesMeta.length, ruleUsage: ruleUsage } });
         }
     });
 }
 
+function generateSummaryData() {
+    const data = [];
+    const textCounts = {};
+
+    // First pass to count text occurrences
+    activeRangesMeta.forEach(meta => {
+        const markText = meta.range.toString();
+        const key = markText.toLowerCase();
+        textCounts[key] = (textCounts[key] || 0) + 1;
+    });
+
+    activeRangesMeta.forEach((meta, index) => {
+        const node = meta.range.startContainer;
+        let contextText = "";
+        let fullElementText = "";
+        let parent = node.parentElement;
+        const markText = meta.range.toString();
+
+        if (parent) {
+            fullElementText = parent.textContent.replace(/\s+/g, ' ').trim();
+            contextText = fullElementText;
+        } else {
+            contextText = markText;
+            fullElementText = markText;
+        }
+
+        const list = cachedState.compiledLists.find(l => l.id === meta.id);
+        const bgColor = list ? list.styles.backgroundColor : '#fff';
+        const color = list ? list.styles.color : '#000';
+
+        data.push({
+            index: index,
+            text: markText,
+            context: contextText,
+            bgColor: bgColor,
+            color: color,
+            ruleName: meta.ruleName || 'Unknown Rule',
+            fullElementText: fullElementText,
+            sameTextCount: textCounts[markText.toLowerCase()] || 1
+        });
+    });
+    return data;
+}
+
 function refreshConfig() {
-    if (!chrome.runtime?.id) return; // Extension context invalidated
+    if (!chrome.runtime?.id) return;
 
     chrome.storage.sync.get([STORAGE_KEY], (result) => {
         if (chrome.runtime.lastError) return;
-        
+
         const config = result[STORAGE_KEY];
         if (!config) return;
 
-        // Compile regexes once per config change
         const compiledLists = compileLists(config);
-        
+
         cachedState = {
             config: config,
             compiledLists: compiledLists,
             isActive: compiledLists.length > 0 && config.settings?.globalEnabled !== false
         };
 
-        // Apply immediately
         applyHighlights();
-        
-        // Setup Observer if active
+
         if (cachedState.isActive) {
             if (!observer) {
-                observer = new MutationObserver(debounce(applyHighlights, 1000));
+                observer = new MutationObserver(debounce(applyHighlights, 250));
                 observer.observe(document.body, { childList: true, subtree: true });
             }
         } else {
@@ -73,7 +126,6 @@ function refreshConfig() {
             updateBadge(0);
         }
 
-        // Handle auto-trigger interval
         if (autoTriggerIntervalId) {
             clearInterval(autoTriggerIntervalId);
             autoTriggerIntervalId = null;
@@ -82,6 +134,9 @@ function refreshConfig() {
         if (cachedState.isActive && config.settings?.autoTriggerInterval && config.settings.autoTriggerInterval !== 'Off') {
             let intervalMs = null;
             switch (config.settings.autoTriggerInterval) {
+                case '15s': intervalMs = 15 * 1000; break;
+                case '30s': intervalMs = 30 * 1000; break;
+                case '45s': intervalMs = 45 * 1000; break;
                 case '1m': intervalMs = 60 * 1000; break;
                 case '5m': intervalMs = 5 * 60 * 1000; break;
                 case '1h': intervalMs = 60 * 60 * 1000; break;
@@ -89,9 +144,7 @@ function refreshConfig() {
 
             if (intervalMs) {
                 autoTriggerIntervalId = setInterval(() => {
-                    if (document.visibilityState === 'visible') {
-                        applyHighlights();
-                    }
+                    if (document.visibilityState === 'visible') applyHighlights();
                 }, intervalMs);
             }
         }
@@ -100,41 +153,54 @@ function refreshConfig() {
 
 function compileLists(config) {
     if (!config.lists) return [];
-    
-    // Check Global Settings
     if (config.settings?.globalEnabled === false) return [];
 
-    // Check Excluded Domains
     if (config.settings?.excludedDomains) {
         const currentDomain = window.location.hostname;
-        const isExcluded = config.settings.excludedDomains.some(domain => 
-            currentDomain.includes(domain)
+        const isExcluded = config.settings.excludedDomains.some(domain =>
+            currentDomain === domain || currentDomain.endsWith('.' + domain)
         );
         if (isExcluded) return [];
     }
 
     return config.lists
-        .filter(l => l.enabled)
+        .filter(l => {
+            if (!l.enabled) return false;
+            if (l.allowedDomains && l.allowedDomains.length > 0) {
+                const currentDomain = window.location.hostname;
+                const isAllowed = l.allowedDomains.some(domain =>
+                    currentDomain === domain || currentDomain.endsWith('.' + domain)
+                );
+                if (!isAllowed) return false;
+            }
+            return true;
+        })
         .map((list, index) => {
             try {
                 let patternSource;
                 if (list.options.isRegex) {
-                    const valid = list.words.filter(w => { 
-                        try { new RegExp(w); return true; } catch { return false; } 
+                    const valid = list.words.filter(w => {
+                        try { new RegExp(w); return true; } catch { return false; }
                     });
                     if (valid.length === 0) return null;
-                    patternSource = `(${valid.join('|')})`;
+                    patternSource = '(' + valid.join('|') + ')';
                 } else {
                     if (list.words.length === 0) return null;
-                    const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-                    patternSource = list.options.wholeWord ? `\\b(${escaped})\\b` : `(${escaped})`;
+                    const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')).join('|');
+                    patternSource = list.options.wholeWord ? '\\b(' + escaped + ')\\b' : '(' + escaped + ')';
                 }
-                
+
                 return {
                     regex: new RegExp(patternSource, list.options.caseSensitive ? 'g' : 'gi'),
                     styles: list.styles,
-                    priority: index, // Lower index = Higher Priority (Top of list)
-                    id: list.id
+                    priority: index,
+                    id: list.id,
+                    name: list.name,
+                    words: list.words,
+                    note: list.note,
+                    targetSelectors: list.targetSelectors || [],
+                    crossNode: list.options.crossNode || false,
+                    options: list.options
                 };
             } catch (e) { return null; }
         })
@@ -147,7 +213,6 @@ function applyHighlights() {
     if (!cachedState.isActive) return;
     if (!chrome.runtime?.id) return;
 
-    // Performance Mode Check
     if (cachedState.config.settings?.performanceMode) {
         if (document.body.innerText.length > 50000) {
             console.log('Mark My Words: Performance mode active. Skipping large page.');
@@ -155,116 +220,165 @@ function applyHighlights() {
         }
     }
 
-    // 1. Clean up existing highlights first
-    // Note: We MUST do this before scanning text nodes, otherwise we miss text inside existing marks.
-    // However, removeAllHighlights() causes a layout/paint.
-    // To minimize shaking, we do it synchronously right before re-applying.
     removeAllHighlights();
 
     const textNodes = getTextNodes();
     if (textNodes.length === 0) return;
 
     let highlightCount = 0;
+    let ruleUsage = {};
+    activeRangesMeta = [];
 
+    const standardLists = cachedState.compiledLists;
+    const rangesByList = new Map();
+
+    // Utility to add range safely
+    const addRange = (node, startOffset, endOffset, list) => {
+        try {
+            const range = new Range();
+            range.setStart(node, startOffset);
+            range.setEnd(node, endOffset);
+
+            if (!rangesByList.has(list.id)) rangesByList.set(list.id, []);
+            rangesByList.get(list.id).push(range);
+
+            activeRangesMeta.push({ range: range, ruleName: list.name, note: list.note, id: list.id });
+            highlightCount++;
+            ruleUsage[list.name] = (ruleUsage[list.name] || 0) + 1;
+        } catch (e) { /* ignore range errors */ }
+    };
+
+    // Phase 1: Cross-Node Matching
+    const crossNodeLists = standardLists.filter(l => l.crossNode);
+    if (crossNodeLists.length > 0) {
+        let fullText = "";
+        let nodeMap = [];
+        textNodes.forEach(node => {
+            const start = fullText.length;
+            fullText += node.nodeValue;
+            nodeMap.push({ node: node, start: start, end: fullText.length });
+        });
+
+        const fullTextForMatching = fullText.replace(/\u00A0/g, ' ');
+
+        crossNodeLists.forEach(list => {
+            for (const match of fullTextForMatching.matchAll(list.regex)) {
+                if (match[0].length === 0) continue;
+                const matchStart = match.index;
+                const matchEnd = match.index + match[0].length;
+
+                const intersectingNodes = nodeMap.filter(nm => nm.end > matchStart && nm.start < matchEnd);
+                intersectingNodes.forEach(nm => {
+                    if (list.targetSelectors.length > 0) {
+                        let allowed = false;
+                        for (let sel of list.targetSelectors) {
+                            if (nm.node.parentNode.closest(sel)) { allowed = true; break; }
+                        }
+                        if (!allowed) return;
+                    }
+
+                    const localStart = Math.max(0, matchStart - nm.start);
+                    const localEnd = Math.min(nm.node.nodeValue.length, matchEnd - nm.start);
+                    addRange(nm.node, localStart, localEnd, list);
+                });
+            }
+        });
+    }
+
+    // Phase 2: Standard Single-Node Matching
+    const singleNodeLists = standardLists.filter(l => !l.crossNode);
     textNodes.forEach(node => {
-        if (!node.nodeValue.trim()) return;
-        
         const text = node.nodeValue;
-        let ranges = [];
+        const textForMatching = text.replace(/\u00A0/g, ' ');
 
-        // Find matches for all lists
-        cachedState.compiledLists.forEach(list => {
-            list.regex.lastIndex = 0;
-            let match;
-            while ((match = list.regex.exec(text)) !== null) {
-                ranges.push({
-                    start: match.index,
-                    end: match.index + match[0].length,
-                    length: match[0].length,
-                    style: list.styles,
-                    priority: list.priority
-                });
-            }
-        });
-
-        if (ranges.length === 0) return;
-
-        // Resolve Overlaps
-        // Sort: Start Position (asc) -> Priority (asc/lower index wins) -> Length (desc/longest wins)
-        ranges.sort((a, b) => {
-            if (a.start !== b.start) return a.start - b.start;
-            if (a.priority !== b.priority) return a.priority - b.priority;
-            return b.length - a.length;
-        });
-
-        const finalRanges = [];
-        let lastEnd = 0;
-        
-        ranges.forEach(r => {
-            if (r.start >= lastEnd) {
-                finalRanges.push(r);
-                lastEnd = r.end;
-                highlightCount++;
-            }
-        });
-
-        // Apply Replacements
-        if (finalRanges.length > 0 && node.parentNode) {
-            const fragment = document.createDocumentFragment();
-            let cursor = 0;
-
-            finalRanges.forEach(range => {
-                // Text before match
-                if (range.start > cursor) {
-                    fragment.appendChild(document.createTextNode(text.substring(cursor, range.start)));
+        singleNodeLists.forEach(list => {
+            if (list.targetSelectors.length > 0) {
+                let allowed = false;
+                for (let sel of list.targetSelectors) {
+                    if (node.parentNode.closest(sel)) { allowed = true; break; }
                 }
-
-                // Match
-                const span = document.createElement('mark');
-                span.className = 'highlight-pro-ext';
-                Object.assign(span.style, {
-                    backgroundColor: range.style.backgroundColor,
-                    color: range.style.color,
-                    borderRadius: '4px',
-                    padding: '0 2px',
-                    boxShadow: `0 0 0 1px ${range.style.backgroundColor}40`,
-                    fontInherit: 'true',
-                    fontWeight: range.style.bold ? 'bold' : 'inherit',
-                    fontStyle: range.style.italic ? 'italic' : 'inherit',
-                    textDecoration: range.style.strikeThrough ? 'line-through' : 'inherit'
-                });
-                span.textContent = text.substring(range.start, range.end);
-                
-                fragment.appendChild(span);
-                cursor = range.end;
-            });
-
-            // Remaining text
-            if (cursor < text.length) {
-                fragment.appendChild(document.createTextNode(text.substring(cursor)));
+                if (!allowed) return;
             }
 
-            node.parentNode.replaceChild(fragment, node);
-        }
+            for (const match of textForMatching.matchAll(list.regex)) {
+                if (match[0].length === 0) continue;
+                addRange(node, match.index, match.index + match[0].length, list);
+            }
+        });
     });
 
+    // Apply via CSS Custom Highlight API
+    if ('highlights' in CSS) {
+        injectHighlightStyles();
+        rangesByList.forEach((ranges, listId) => {
+            if (ranges.length === 0) return;
+            const validRanges = ranges.filter(r => {
+                try {
+                    // Verify the range is still valid (nodes still in DOM)
+                    r.getBoundingClientRect();
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            });
+            if (validRanges.length === 0) return;
+            const highlight = new Highlight(...validRanges);
+            
+            // Higher priority = higher number. Top rules (index 0) get highest priority
+            const listIndex = cachedState.compiledLists.findIndex(l => l.id === listId);
+            if (listIndex !== -1) {
+                highlight.priority = cachedState.compiledLists.length - listIndex;
+            }
+            
+            CSS.highlights.set('mmw-' + listId, highlight);
+        });
+    }
+
     updateBadge(highlightCount);
+    updateAnalytics(highlightCount, ruleUsage);
 }
+
+function injectHighlightStyles() {
+    let styleTag = document.getElementById('mmw-dynamic-styles');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'mmw-dynamic-styles';
+        document.head.appendChild(styleTag);
+    }
+
+    let css = '';
+    cachedState.compiledLists.forEach(list => {
+        var strike = (list.styles && list.styles.strikeThrough) ? 'line-through' : 'none';
+        var glow = (list.styles && list.styles.glow) ? `text-shadow: 0 0 8px ${list.styles.backgroundColor}, 0 0 12px ${list.styles.backgroundColor} !important;` : '';
+        css += '::highlight(mmw-' + list.id + ') {\n';
+        css += '  background-color: ' + list.styles.backgroundColor + ' !important;\n';
+        css += '  color: ' + list.styles.color + ' !important;\n';
+        css += '  text-decoration: ' + strike + ' !important;\n';
+        if (glow) css += '  ' + glow + '\n';
+        css += '}\n';
+    });
+    styleTag.textContent = css;
+}
+
+const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE', 'SELECT', 'OPTION', 'CANVAS', 'SVG', 'AUDIO', 'VIDEO']);
 
 function getTextNodes() {
     const walker = document.createTreeWalker(
         document.body,
-        NodeFilter.SHOW_TEXT,
+        NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
         {
             acceptNode: (node) => {
-                const tag = node.parentNode.tagName;
-                if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE'].includes(tag)) {
-                    return NodeFilter.FILTER_REJECT;
-                }
-                if (node.parentNode.isContentEditable) return NodeFilter.FILTER_REJECT;
-                // Avoid highlighting inside our own marks if they weren't cleaned up for some reason
-                if (node.parentNode.classList && node.parentNode.classList.contains('highlight-pro-ext')) {
-                    return NodeFilter.FILTER_REJECT;
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (SKIP_TAGS.has(node.tagName)) return NodeFilter.FILTER_REJECT;
+                    if (node.isContentEditable) return NodeFilter.FILTER_REJECT;
+                    if (node.id === 'mmw-tooltip') return NodeFilter.FILTER_REJECT;
+
+                    if (node.checkVisibility && !node.checkVisibility({checkOpacity: true, checkVisibilityCSS: true})) {
+                        if (node.tagName !== 'A' && node.tagName !== 'LABEL') {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                    }
+                    return NodeFilter.FILTER_SKIP;
                 }
                 return NodeFilter.FILTER_ACCEPT;
             }
@@ -273,38 +387,49 @@ function getTextNodes() {
 
     const nodes = [];
     let node;
-    while (node = walker.nextNode()) nodes.push(node);
+    while ((node = walker.nextNode())) nodes.push(node);
     return nodes;
 }
 
 function removeAllHighlights() {
-    const marks = document.querySelectorAll('mark.highlight-pro-ext');
-    if (marks.length === 0) return;
-
-    const parents = new Set();
-    marks.forEach(mark => {
-        const parent = mark.parentNode;
-        if (parent) {
-            parent.replaceChild(document.createTextNode(mark.textContent), mark);
-            parents.add(parent);
-        }
-    });
-    
-    // Normalize to merge text nodes (prevents fragmentation)
-    parents.forEach(p => p.normalize());
+    if ('highlights' in CSS) {
+        CSS.highlights.clear();
+    }
+    activeRangesMeta = [];
+    const tooltip = document.getElementById('mmw-tooltip');
+    if (tooltip) tooltip.style.display = 'none';
 }
 
 function updateBadge(count) {
     if (!chrome.runtime?.id) return;
     try {
-        chrome.runtime.sendMessage({
-            action: "update_badge",
-            count: count
-        }, () => { if(chrome.runtime.lastError){ /* ignore */ } });
+        chrome.runtime.sendMessage({ action: "update_badge", count: count }, () => {
+            if (chrome.runtime.lastError) { /* ignore */ }
+        });
     } catch (e) { /* ignore */ }
 }
 
-// Helper: Debounce
+function updateAnalytics(count, ruleUsage) {
+    if (count === 0) return;
+    chrome.storage.local.get(['highlight_analytics'], (result) => {
+        let analytics = result.highlight_analytics || { totalHighlights: 0, ruleUsage: {} };
+        analytics.totalHighlights += count;
+
+        Object.entries(ruleUsage).forEach(([rule, ruleCount]) => {
+            analytics.ruleUsage[rule] = (analytics.ruleUsage[rule] || 0) + ruleCount;
+        });
+
+        chrome.storage.local.set({ highlight_analytics: analytics });
+    });
+}
+
+
+
+function escapeHtml(text) {
+    if (!text) return text;
+    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 function debounce(func, wait) {
     let timeout;
     return function(...args) {
@@ -313,7 +438,6 @@ function debounce(func, wait) {
     };
 }
 
-// Start
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {

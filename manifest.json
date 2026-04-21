@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mark My Words",
-  "version": "1.3.0",
+  "version": "1.6.0",
   "description": "Smart, modern text highlighting with customizable styles.",
   "permissions": [
     "storage",
@@ -28,12 +28,32 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "commands": {
+    "toggle-extension": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Toggle Mark My Words globally"
+    },
+    "add-to-list": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+H",
+        "mac": "Command+Shift+H"
+      },
+      "description": "Add selected text to top list"
+    }
   }
 }
