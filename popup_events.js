@@ -804,7 +804,6 @@ function createList() {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', init);
 function fetchSummaryData() {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
