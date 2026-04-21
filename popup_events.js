@@ -1,9 +1,9 @@
 function attachEvents() {
     // 1. Navigation
     const backBtn = document.getElementById('nav-back');
-    if (backBtn) backBtn.addEventListener('click', () => {
-        state.activeView = 'dashboard';
-        fetchPageRuleCounts(() => render());
+    if (backBtn) backBtn.addEventListener('click', () => { 
+        state.activeView = 'dashboard'; 
+        fetchPageRuleCounts(() => render()); 
     });
 
     const createBtn = document.getElementById('btn-create');
@@ -57,14 +57,14 @@ function attachEvents() {
         btn.addEventListener('click', (e) => {
             const targetTab = e.target.dataset.tab;
             state.analyticsTab = targetTab;
-
+            
             // Update tabs styling
             document.querySelectorAll('[data-action="switch-analytics-tab-no-render"]').forEach(b => {
                 const isActive = b.dataset.tab === targetTab;
                 b.style.background = isActive ? 'var(--primary-light)' : 'transparent';
                 b.style.color = isActive ? '#fff' : 'var(--text-muted)';
             });
-
+            
             // Update content visibility
             document.getElementById('analytics-tab-current').style.display = targetTab === 'current' ? 'block' : 'none';
             document.getElementById('analytics-tab-overall').style.display = targetTab === 'overall' ? 'block' : 'none';
@@ -242,7 +242,6 @@ function attachEvents() {
                     card.classList.remove('active');
                 }
                 save(false);
-                if (typeof updateLiveTester === 'function') updateLiveTester();
             });
         });
 
@@ -267,7 +266,6 @@ function attachEvents() {
                 });
 
                 save(false);
-                if (typeof updateLiveTester === 'function') updateLiveTester();
             });
         }
 
@@ -287,14 +285,13 @@ function attachEvents() {
                 if (previewSpan) {
                     if (key === 'strikeThrough') previewSpan.style.textDecoration = list.styles.strikeThrough ? 'line-through' : 'none';
                     if (key === 'glow') {
-                        previewSpan.style.textShadow = list.styles.glow
-                            ? `0 0 8px ${list.styles.backgroundColor}, 0 0 12px ${list.styles.backgroundColor}`
+                        previewSpan.style.textShadow = list.styles.glow 
+                            ? `0 0 8px ${list.styles.backgroundColor}, 0 0 12px ${list.styles.backgroundColor}` 
                             : 'none';
                     }
                 }
 
                 save(false);
-                if (typeof updateLiveTester === 'function') updateLiveTester();
             });
         });
 
@@ -317,7 +314,7 @@ function attachEvents() {
             btnSavePreset.addEventListener('click', () => {
                 const bg = bgPicker ? bgPicker.value : list.styles.backgroundColor;
                 const text = textPicker ? textPicker.value : list.styles.color;
-
+                
                 // Check for duplicates
                 if (!state.config.settings.customStyles) state.config.settings.customStyles = [];
                 const exists = state.config.settings.customStyles.some(p => p.bg === bg && p.text === text);
@@ -423,7 +420,7 @@ function attachEvents() {
                     keywordTable.querySelectorAll('.keyword-row').forEach(row => {
                         newWords.push(row.dataset.word);
                     });
-
+                    
                     if (newWords.length === list.words.length) {
                         list.words = newWords;
                         save(false);
@@ -480,7 +477,7 @@ function attachEvents() {
 
         const newInput = document.getElementById('new-word-input');
         if (newInput) {
-            // Regex Validation & Live Tester trigger
+            // Regex Validation
             newInput.addEventListener('input', (e) => {
                 const val = e.target.value;
                 const btn = document.getElementById('btn-add-word');
@@ -534,6 +531,7 @@ function attachEvents() {
                 }
             });
         }
+
     }
 
     // 4. Settings View Interactions
@@ -637,10 +635,10 @@ function attachEvents() {
             btnSavePresetSettings.addEventListener('click', () => {
                 const bg = document.getElementById('setting-new-bg').value;
                 const text = document.getElementById('setting-new-text').value;
-
+                
                 if (!state.config.settings.customStyles) state.config.settings.customStyles = [];
                 const exists = state.config.settings.customStyles.some(p => p.bg === bg && p.text === text);
-
+                
                 if (!exists) {
                     state.config.settings.customStyles.push({ bg, text });
                     save();
@@ -777,12 +775,6 @@ function handleRemoveWord(list, word, tagElement) {
     }
     save(false);
 
-    // Attempt to update live tester if we're in editor view
-    const input = document.getElementById('live-test-input');
-    if (input) {
-        // Trigger input event to re-evaluate the tester
-        input.dispatchEvent(new Event('input'));
-    }
 }
 
 function createList() {
@@ -870,3 +862,4 @@ function fetchAnalyticsData() {
         done();
     }
 }
+

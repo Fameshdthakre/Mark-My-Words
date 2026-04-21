@@ -1,6 +1,6 @@
 /**
  * Content Script: content.js
- * V5 Update: Uses CSS Custom Highlight API, Interactive Tooltips, Analytics
+ * V5 Update: Uses CSS Custom Highlight API, Analytics
  * Optimized for performance: Zero DOM mutation, Range-based highlighting.
  */
 
@@ -47,9 +47,68 @@ function init() {
                 ruleUsage[meta.ruleName] = (ruleUsage[meta.ruleName] || 0) + 1;
             });
             sendResponse({ analytics: { totalHighlights: activeRangesMeta.length, ruleUsage: ruleUsage } });
+        } else if (request.action === "scroll_to_mark") {
+            const index = request.index;
+            const meta = activeRangesMeta[index];
+            if (meta && meta.range) {
+                const rect = meta.range.getBoundingClientRect();
+                if (rect.top !== 0 || rect.left !== 0) {
+                    window.scrollTo({
+                        top: window.scrollY + rect.top - (window.innerHeight / 2),
+                        behavior: 'auto'
+                    });
+                    
+                    // Trigger visual flash
+                    flashRange(meta.range);
+                }
+            }
         }
     });
 }
+
+function flashRange(range) {
+    const rects = range.getClientRects();
+    const flashId = 'mmw-scroll-flash-' + Date.now();
+    
+    // Create an overlay for each rect in the range (handles multi-line)
+    for (const rect of rects) {
+        const flash = document.createElement('div');
+        flash.className = 'mmw-scroll-flash';
+        flash.style.cssText = `
+            position: fixed;
+            top: ${rect.top}px;
+            left: ${rect.left}px;
+            width: ${rect.width}px;
+            height: ${rect.height}px;
+            background: rgba(139, 92, 246, 0.4);
+            border: 2px solid #8b5cf6;
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 2147483646;
+            box-shadow: 0 0 15px #8b5cf6;
+            animation: mmw-pulse-flash 0.8s ease-out forwards;
+        `;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 1000);
+    }
+
+    // Inject animation if not exists
+    if (!document.getElementById('mmw-flash-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'mmw-flash-keyframes';
+        style.textContent = `
+            @keyframes mmw-pulse-flash {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.1); opacity: 0.8; }
+                100% { transform: scale(1.2); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+
+
 
 function generateSummaryData() {
     const data = [];
@@ -339,7 +398,7 @@ function applyHighlights() {
     // Calculate deltas for analytics
     let deltaCount = Math.max(0, highlightCount - lastHighlightCount);
     let deltaRuleUsage = {};
-
+    
     Object.entries(ruleUsage).forEach(([rule, count]) => {
         let lastCount = lastRuleUsage[rule] || 0;
         let delta = Math.max(0, count - lastCount);
@@ -347,7 +406,7 @@ function applyHighlights() {
             deltaRuleUsage[rule] = delta;
         }
     });
-
+    
     lastHighlightCount = highlightCount;
     lastRuleUsage = ruleUsage;
 
@@ -390,7 +449,7 @@ function getTextNodes() {
                 if (node.nodeType === Node.ELEMENT_NODE) {
                     if (SKIP_TAGS.has(node.tagName)) return NodeFilter.FILTER_REJECT;
                     if (node.isContentEditable) return NodeFilter.FILTER_REJECT;
-                    if (node.id === 'mmw-tooltip') return NodeFilter.FILTER_REJECT;
+
 
                     if (node.checkVisibility && !node.checkVisibility({checkOpacity: true, checkVisibilityCSS: true})) {
                         if (node.tagName !== 'A' && node.tagName !== 'LABEL') {
@@ -415,8 +474,7 @@ function removeAllHighlights() {
         CSS.highlights.clear();
     }
     activeRangesMeta = [];
-    const tooltip = document.getElementById('mmw-tooltip');
-    if (tooltip) tooltip.style.display = 'none';
+
 }
 
 function updateBadge(count) {

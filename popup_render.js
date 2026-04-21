@@ -77,7 +77,7 @@ function render() {
             <div>
                 <h1 class="app-title">Mark My Words <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">v${state.version}</span></h1>
                 <div class="status-badge">
-                    <div class="status-dot" style="background-color: ${state.config.settings.globalEnabled ? 'var(--accent)' : 'var(--text-muted)'}"></div>
+                    <div class="status-dot" style="background-color: ${state.config.settings.globalEnabled ? 'var(--accent)' : 'var(--text-muted)'}"></div> 
                     ${state.config.settings.globalEnabled ? 'Active' : 'Paused'}
                 </div>
             </div>
@@ -200,7 +200,7 @@ function renderDashboardHtml() {
             <div class="toggle-switch ${list.enabled ? 'on' : 'off'}" data-action="toggle" data-id="${list.id}">
                 <div class="toggle-dot"></div>
             </div>
-
+            
             <div class="list-content" style="flex: 1; min-width: 0; padding: 0 0.5rem;" data-action="edit" data-id="${list.id}">
                 <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-heading);">
                     ${escapeHtml(list.name)}
@@ -212,7 +212,7 @@ function renderDashboardHtml() {
                     ${state.pageRuleCounts[list.id] ? `<span style="font-size: 0.65rem; color: #fff; background: var(--primary-light); padding: 2px 6px; border-radius: 8px; font-weight: 600;">${state.pageRuleCounts[list.id]}</span>` : ''}
                 </div>
             </div>
-
+            
             <div style="display: flex; gap: 0.25rem;">
                 <button class="btn btn-icon" data-action="duplicate" data-id="${list.id}" title="Duplicate Rule" aria-label="Duplicate Rule" style="opacity: 0.6;">
                     ${ICONS.copy}
@@ -274,7 +274,7 @@ function renderEditorHtml() {
                 <span style="font-size: 1.25rem; margin-bottom: 2px;">&lt;&gt;</span> Cross-Node
             </div>
         </div>
-
+        
         <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
             <div class="input-group" style="flex: 1; margin-bottom: 0;">
                 <label class="label" style="font-size: 0.75rem;">Allowed Domains</label>
@@ -314,7 +314,7 @@ function renderEditorHtml() {
             </div>
             ${(state.config.settings.customStyles && state.config.settings.customStyles.length > 0) ? `<div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.5rem;">Tip: Hold <strong>Alt</strong> while clicking the <strong>×</strong> to delete custom presets.</div>` : ''}
 
-
+            
             <!-- Create New Preset (Boxed UI) -->
             <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-glass); border-radius: 0.5rem; border: 1px dashed var(--border);">
                 <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-main);">Custom Color Picker</div>
@@ -342,6 +342,7 @@ function renderEditorHtml() {
 
 
 
+
         <!-- Keywords Section (Boxed Pane) -->
         <div class="input-group" style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-glass); border-radius: 0.5rem; border: 1px dashed var(--border);">
              <div class="flex justify-between items-center mb-3">
@@ -350,7 +351,7 @@ function renderEditorHtml() {
                     <span style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.7;">(${list.words.length})</span>
                 </div>
              </div>
-
+            
             <form id="add-word-form" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; height: 2.5rem;">
                 <input type="text" id="new-word-input" class="word-input" style="flex: 1; height: 100%; border-radius: 0.5rem; padding: 0 0.75rem; box-sizing: border-box; background: var(--bg-main);" placeholder="Add a keyword..." autocomplete="off">
                 <div style="display: flex; gap: 0.35rem;">
@@ -358,9 +359,9 @@ function renderEditorHtml() {
                     ${list.words.length > 0 ? `<button type="button" id="btn-clear-words" class="btn btn-secondary" title="Clear All Keywords" style="width: 2.5rem; height: 2.5rem; padding: 0; border-radius: 0.5rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.2);">${ICONS.trash}</button>` : ''}
                 </div>
             </form>
-
+            
             <div id="regex-error-msg" class="word-input-error" style="margin-bottom: 0.5rem;">Invalid Regular Expression</div>
-
+            
             <div id="keyword-table" class="keyword-table" style="max-height: 150px; overflow-y: auto; border-color: var(--border);">
                 ${list.words.map((w, index) => `
                     <div class="keyword-row" draggable="true" data-index="${index}" data-word="${escapeHtml(w)}">
@@ -428,7 +429,7 @@ function renderSettingsHtml() {
         <div class="input-group">
             <label class="label">Manage Highlight Styles</label>
             <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">Your custom presets will appear here alongside built-in ones.</div>
-
+            
             <div class="color-picker-row" style="flex-wrap: wrap; gap: 0.75rem;">
                 <!-- Built-in (Read-only) -->
                 ${PRESETS.map(p => `
@@ -472,7 +473,7 @@ function renderSettingsHtml() {
                 <input type="file" id="file-import" accept=".json" style="display: none;">
             </div>
         </div>
-
+        
         <div style="margin-top: 2rem; text-align: center; font-size: 0.75rem; color: var(--text-muted);">
             Mark My Words v${state.version}<br>
             Sync enabled
@@ -547,7 +548,7 @@ function renderPreviewHtml() {
 
 function renderAnalyticsHtml() {
     const isCurrent = state.analyticsTab === 'current';
-
+    
     const genTabHtml = (isCurrentTab, sourceData) => {
         const total = sourceData.totalHighlights || 0;
         const ruleUsage = sourceData.ruleUsage || {};
@@ -555,7 +556,7 @@ function renderAnalyticsHtml() {
             .filter(([_, count]) => count > 0)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10);
-
+            
         return `
         <div style="background: var(--bg-glass); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem;">
             <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary-light); line-height: 1;">${total}</div>
@@ -582,7 +583,7 @@ function renderAnalyticsHtml() {
     return `
     <div class="editor-view">
         <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">Analytics Dashboard</h2>
-
+        
         <div class="analytics-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--bg-glass); padding: 0.25rem; border-radius: 0.5rem; border: 1px solid var(--border);">
             <button class="btn btn-secondary" data-action="switch-analytics-tab-no-render" data-tab="current" style="flex: 1; border: none; background: ${isCurrent ? 'var(--primary-light)' : 'transparent'}; color: ${isCurrent ? '#fff' : 'var(--text-muted)'}; transition: background 0.2s, color 0.2s;">Active Tab</button>
             <button class="btn btn-secondary" data-action="switch-analytics-tab-no-render" data-tab="overall" style="flex: 1; border: none; background: ${!isCurrent ? 'var(--primary-light)' : 'transparent'}; color: ${!isCurrent ? '#fff' : 'var(--text-muted)'}; transition: background 0.2s, color 0.2s;">Overall</button>
@@ -596,3 +597,4 @@ function renderAnalyticsHtml() {
         </div>
     </div>`;
 }
+

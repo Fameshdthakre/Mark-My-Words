@@ -122,6 +122,10 @@ chrome.commands.onCommand.addListener((command) => {
     } else if (command === "add-to-list") {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs[0] && tabs[0].id) {
+                const url = tabs[0].url || "";
+                if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('about:')) {
+                    return;
+                }
                 chrome.scripting.executeScript(
                     {
                         target: { tabId: tabs[0].id },
