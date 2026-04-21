@@ -1,0 +1,158 @@
+// background.js
+
+const STORAGE_KEY = 'highlighter_config_v4';
+
+// 1. Initialize Context Menus
+let menuUpdatePromise = Promise.resolve();
+
+function updateContextMenus() {
+    menuUpdatePromise = menuUpdatePromise.then(async () => {
+        try {
+            await new Promise(resolve => chrome.contextMenus.removeAll(resolve));
+            const result = await chrome.storage.sync.get([STORAGE_KEY]);
+            const config = result[STORAGE_KEY];
+
+            if (!config || !config.lists || config.lists.length === 0) {
+                await new Promise(resolve => {
+                    chrome.contextMenus.create({
+                        id: "no-lists",
+                        title: "No highlight lists active",
+                        contexts: ["selection"],
+                        enabled: false
+                    }, () => { let _ = chrome.runtime.lastError; resolve(); });
+                });
+                return;
+            }
+
+            const activeLists = config.lists.filter(l => l.enabled);
+
+            await new Promise(resolve => {
+                chrome.contextMenus.create({
+                    id: "highlight-selection",
+                    title: "Highlight '%s'",
+                    contexts: ["selection"]
+                }, () => { let _ = chrome.runtime.lastError; resolve(); });
+            });
+
+            for (const list of activeLists) {
+                await new Promise(resolve => {
+                    chrome.contextMenus.create({
+                        id: `add-to-${list.id}`,
+                        parentId: "highlight-selection",
+                        title: `Add to "${list.name}"`,
+                        contexts: ["selection"]
+                    }, () => { let _ = chrome.runtime.lastError; resolve(); });
+                });
+            }
+        } catch (error) {
+            console.error("Error updating context menus:", error);
+        }
+    });
+}
+
+// 2. Handle Clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    // Check if the clicked item is one of our "Add to..." items
+    if (info.menuItemId.startsWith("add-to-")) {
+        const listId = info.menuItemId.replace("add-to-", "");
+        const text = info.selectionText.trim();
+        
+        if (!text) return;
+
+        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+            const config = result[STORAGE_KEY];
+            if (!config) return; // Should handle if config is missing
+
+            // Find the target list
+            const listIndex = config.lists.findIndex(l => l.id === listId);
+            if (listIndex !== -1) {
+                const list = config.lists[listIndex];
+                
+                // Add word if not exists
+                if (!list.words.includes(text)) {
+                    list.words.push(text);
+                    
+                    // Save back to storage - this will trigger onChanged -> updateContextMenus
+                    chrome.storage.sync.set({ [STORAGE_KEY]: config }, () => {
+                        // Notify tab to refresh immediately for better UX
+                        if (tab && tab.id) {
+                            chrome.tabs.sendMessage(tab.id, { action: "refresh_highlights" });
+                        }
+                    });
+                } else {
+                    // Already exists, maybe just refresh to be safe?
+                    if (tab && tab.id) {
+                         chrome.tabs.sendMessage(tab.id, { action: "refresh_highlights" });
+                    }
+                }
+            }
+        });
+    }
+});
+
+// 3. Listen for Storage Changes (Dynamic Update)
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'sync' && changes[STORAGE_KEY]) {
+        updateContextMenus();
+    }
+});
+
+// 4. Handle Badge Updates (Count)
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "update_badge") {
+        const count = message.count;
+        const text = count > 0 ? count.toString() : "";
+        if (sender.tab && sender.tab.id) {
+            chrome.action.setBadgeText({ text: text, tabId: sender.tab.id });
+            chrome.action.setBadgeBackgroundColor({ color: "#6d28d9", tabId: sender.tab.id }); // Indigo
+        }
+    }
+});
+
+// 5. Handle Keyboard Commands
+chrome.commands.onCommand.addListener((command) => {
+    if (command === "toggle-extension") {
+        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+            const config = result[STORAGE_KEY];
+            if (config && config.settings) {
+                config.settings.globalEnabled = !config.settings.globalEnabled;
+                chrome.storage.sync.set({ [STORAGE_KEY]: config });
+            }
+        });
+    } else if (command === "add-to-list") {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0] && tabs[0].id) {
+                const url = tabs[0].url || "";
+                if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('about:')) {
+                    return;
+                }
+                chrome.scripting.executeScript(
+                    {
+                        target: { tabId: tabs[0].id },
+                        func: () => window.getSelection().toString().trim(),
+                    },
+                    (results) => {
+                        if (chrome.runtime.lastError || !results || !results[0] || !results[0].result) return;
+                        
+                        const text = results[0].result;
+                        chrome.storage.sync.get([STORAGE_KEY], (result) => {
+                            const config = result[STORAGE_KEY];
+                            if (config && config.lists && config.lists.length > 0) {
+                                // Add to the first enabled list, or first overall
+                                const targetList = config.lists.find(l => l.enabled) || config.lists[0];
+                                if (!targetList.words.includes(text)) {
+                                    targetList.words.push(text);
+                                    chrome.storage.sync.set({ [STORAGE_KEY]: config });
+                                }
+                            }
+                        });
+                    }
+                );
+            }
+        });
+    }
+});
+
+// Initial Setup
+chrome.runtime.onInstalled.addListener(updateContextMenus);
+chrome.runtime.onStartup.addListener(updateContextMenus);

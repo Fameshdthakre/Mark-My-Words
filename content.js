@@ -1,129 +1,522 @@
 /**
  * Content Script: content.js
- * This script runs on the web pages you visit.
- * It reads the settings from Chrome Storage and highlights the text.
+ * V5 Update: Uses CSS Custom Highlight API, Analytics
+ * Optimized for performance: Zero DOM mutation, Range-based highlighting.
  */
 
-// Debounce helper to prevent freezing on rapid updates
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+const STORAGE_KEY = 'highlighter_config_v4';
 
-function applyHighlights() {
-    chrome.storage.local.get(['highlighter_lists_v3'], (result) => {
-        if (!result.highlighter_lists_v3) return;
-        
-        // Remove existing highlights to prevent duplication/mess
-        document.querySelectorAll('mark.highlight-pro-ext').forEach(mark => {
-            const parent = mark.parentNode;
-            parent.replaceChild(document.createTextNode(mark.textContent), mark);
-            parent.normalize(); // Merge text nodes
-        });
+// --- State ---
+let cachedState = {
+    config: null,
+    compiledLists: [],
+    isActive: false
+};
 
-        const lists = result.highlighter_lists_v3.filter(l => l.enabled);
-        if (lists.length === 0) return;
+let observer = null;
+let autoTriggerIntervalId = null;
+let activeRangesMeta = [];
+let lastHighlightCount = 0;
+let lastRuleUsage = {};
 
-        const walker = document.createTreeWalker(
-            document.body,
-            NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: (node) => {
-                    // Skip script, style, and already highlighted nodes
-                    if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'].includes(node.parentNode.tagName)) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    return NodeFilter.FILTER_ACCEPT;
-                }
-            }
-        );
+// --- Initialization ---
 
-        const textNodes = [];
-        let currentNode;
-        while (currentNode = walker.nextNode()) {
-            textNodes.push(currentNode);
+function init() {
+    refreshConfig();
+
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'sync' && changes[STORAGE_KEY]) {
+            refreshConfig();
         }
+    });
 
-        // Apply highlighting (Simplified version of the React Preview logic)
-        // Note: Direct DOM manipulation is safer than innerHTML replacement for arbitrary pages
-        textNodes.forEach(node => {
-            let text = node.nodeValue;
-            let rangesToHighlight = [];
-
-            lists.forEach(list => {
-                let patternSource;
-                
-                try {
-                    if (list.options.isRegex) {
-                        const valid = list.words.filter(w => { try { new RegExp(w); return true; } catch { return false; } });
-                        if (valid.length === 0) return;
-                        patternSource = `(${valid.join('|')})`;
-                    } else {
-                        if (list.words.length === 0) return;
-                        const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-                        patternSource = list.options.wholeWord ? `\\b(${escaped})\\b` : `(${escaped})`;
-                    }
-
-                    const regex = new RegExp(patternSource, list.options.caseSensitive ? 'g' : 'gi');
-                    let match;
-                    while ((match = regex.exec(text)) !== null) {
-                        rangesToHighlight.push({
-                            start: match.index,
-                            end: match.index + match[0].length,
-                            style: list.styles
-                        });
-                    }
-                } catch (e) {
-                    // Invalid regex in user input, ignore
-                }
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "refresh_highlights") {
+            refreshConfig();
+        } else if (request.action === "get_summary") {
+            sendResponse({ data: generateSummaryData() });
+        } else if (request.action === "get_page_rule_counts") {
+            const counts = {};
+            activeRangesMeta.forEach(meta => {
+                counts[meta.id] = (counts[meta.id] || 0) + 1;
             });
-
-            // If we found matches in this text node
-            if (rangesToHighlight.length > 0) {
-                // Sort ranges and process
-                // Note: Complex overlap handling is omitted for brevity, taking the first valid match strategy
-                // For a production extension, use a library like 'mark.js'
-                
-                const range = rangesToHighlight[0]; // Simple implementation: take first match
-                const span = document.createElement('mark');
-                span.className = 'highlight-pro-ext';
-                span.style.backgroundColor = range.style.backgroundColor;
-                span.style.color = range.style.color;
-                span.textContent = text.substring(range.start, range.end);
-                span.style.borderRadius = '2px';
-                span.style.padding = '0 2px';
-
-                const afterText = text.substring(range.end);
-                const beforeText = text.substring(0, range.start);
-
-                const parent = node.parentNode;
-                if (beforeText) parent.insertBefore(document.createTextNode(beforeText), node);
-                parent.insertBefore(span, node);
-                if (afterText) parent.insertBefore(document.createTextNode(afterText), node);
-                
-                parent.removeChild(node);
+            sendResponse({ counts: counts });
+        } else if (request.action === "get_page_analytics") {
+            const ruleUsage = {};
+            activeRangesMeta.forEach(meta => {
+                ruleUsage[meta.ruleName] = (ruleUsage[meta.ruleName] || 0) + 1;
+            });
+            sendResponse({ analytics: { totalHighlights: activeRangesMeta.length, ruleUsage: ruleUsage } });
+        } else if (request.action === "scroll_to_mark") {
+            const index = request.index;
+            const meta = activeRangesMeta[index];
+            if (meta && meta.range) {
+                const rect = meta.range.getBoundingClientRect();
+                if (rect.top !== 0 || rect.left !== 0) {
+                    window.scrollTo({
+                        top: window.scrollY + rect.top - (window.innerHeight / 2),
+                        behavior: 'auto'
+                    });
+                    
+                    // Trigger visual flash
+                    flashRange(meta.range);
+                }
             }
-        });
+        }
     });
 }
 
-// Listen for updates from the popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "refresh_highlights") {
-        applyHighlights();
+function flashRange(range) {
+    const rects = range.getClientRects();
+    const flashId = 'mmw-scroll-flash-' + Date.now();
+    
+    // Create an overlay for each rect in the range (handles multi-line)
+    for (const rect of rects) {
+        const flash = document.createElement('div');
+        flash.className = 'mmw-scroll-flash';
+        flash.style.cssText = `
+            position: fixed;
+            top: ${rect.top}px;
+            left: ${rect.left}px;
+            width: ${rect.width}px;
+            height: ${rect.height}px;
+            background: rgba(139, 92, 246, 0.4);
+            border: 2px solid #8b5cf6;
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 2147483646;
+            box-shadow: 0 0 15px #8b5cf6;
+            animation: mmw-pulse-flash 0.8s ease-out forwards;
+        `;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 1000);
     }
-});
 
-// Run on load
-applyHighlights();
+    // Inject animation if not exists
+    if (!document.getElementById('mmw-flash-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'mmw-flash-keyframes';
+        style.textContent = `
+            @keyframes mmw-pulse-flash {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.1); opacity: 0.8; }
+                100% { transform: scale(1.2); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
 
-// Optional: Observe DOM changes (for dynamic content like infinite scroll)
-const observer = new MutationObserver(debounce(applyHighlights, 1000));
-observer.observe(document.body, { childList: true, subtree: true });
+
+
+
+function generateSummaryData() {
+    const data = [];
+    const textCounts = {};
+
+    // First pass to count text occurrences
+    activeRangesMeta.forEach(meta => {
+        const markText = meta.range.toString();
+        const key = markText.toLowerCase();
+        textCounts[key] = (textCounts[key] || 0) + 1;
+    });
+
+    activeRangesMeta.forEach((meta, index) => {
+        const node = meta.range.startContainer;
+        let contextText = "";
+        let fullElementText = "";
+        let parent = node.parentElement;
+        const markText = meta.range.toString();
+
+        if (parent) {
+            fullElementText = parent.textContent.replace(/\s+/g, ' ').trim();
+            contextText = fullElementText;
+        } else {
+            contextText = markText;
+            fullElementText = markText;
+        }
+
+        const list = cachedState.compiledLists.find(l => l.id === meta.id);
+        const bgColor = list ? list.styles.backgroundColor : '#fff';
+        const color = list ? list.styles.color : '#000';
+
+        data.push({
+            index: index,
+            text: markText,
+            context: contextText,
+            bgColor: bgColor,
+            color: color,
+            ruleName: meta.ruleName || 'Unknown Rule',
+            fullElementText: fullElementText,
+            sameTextCount: textCounts[markText.toLowerCase()] || 1
+        });
+    });
+    return data;
+}
+
+function refreshConfig() {
+    if (!chrome.runtime?.id) return;
+
+    chrome.storage.sync.get([STORAGE_KEY], (result) => {
+        if (chrome.runtime.lastError) return;
+
+        const config = result[STORAGE_KEY];
+        if (!config) return;
+
+        const compiledLists = compileLists(config);
+
+        cachedState = {
+            config: config,
+            compiledLists: compiledLists,
+            isActive: compiledLists.length > 0 && config.settings?.globalEnabled !== false
+        };
+
+        applyHighlights();
+
+        if (cachedState.isActive) {
+            if (!observer) {
+                observer = new MutationObserver(debounce(applyHighlights, 100));
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+        } else {
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+            removeAllHighlights();
+            updateBadge(0);
+        }
+
+        if (autoTriggerIntervalId) {
+            clearInterval(autoTriggerIntervalId);
+            autoTriggerIntervalId = null;
+        }
+
+        if (cachedState.isActive && config.settings?.autoTriggerInterval && config.settings.autoTriggerInterval !== 'Off') {
+            let intervalMs = null;
+            switch (config.settings.autoTriggerInterval) {
+                case '15s': intervalMs = 15 * 1000; break;
+                case '30s': intervalMs = 30 * 1000; break;
+                case '45s': intervalMs = 45 * 1000; break;
+                case '1m': intervalMs = 60 * 1000; break;
+                case '5m': intervalMs = 5 * 60 * 1000; break;
+                case '1h': intervalMs = 60 * 60 * 1000; break;
+            }
+
+            if (intervalMs) {
+                autoTriggerIntervalId = setInterval(() => {
+                    if (document.visibilityState === 'visible') applyHighlights();
+                }, intervalMs);
+            }
+        }
+    });
+}
+
+function compileLists(config) {
+    if (!config.lists) return [];
+    if (config.settings?.globalEnabled === false) return [];
+
+    if (config.settings?.excludedDomains) {
+        const currentDomain = window.location.hostname;
+        const isExcluded = config.settings.excludedDomains.some(domain =>
+            currentDomain === domain || currentDomain.endsWith('.' + domain)
+        );
+        if (isExcluded) return [];
+    }
+
+    return config.lists
+        .filter(l => {
+            if (!l.enabled) return false;
+            if (l.allowedDomains && l.allowedDomains.length > 0) {
+                const currentDomain = window.location.hostname;
+                const isAllowed = l.allowedDomains.some(domain =>
+                    currentDomain === domain || currentDomain.endsWith('.' + domain)
+                );
+                if (!isAllowed) return false;
+            }
+            return true;
+        })
+        .map((list, index) => {
+            try {
+                let patternSource;
+                if (list.options.isRegex) {
+                    const valid = list.words.filter(w => {
+                        try { new RegExp(w); return true; } catch { return false; }
+                    });
+                    if (valid.length === 0) return null;
+                    patternSource = '(' + valid.join('|') + ')';
+                } else {
+                    if (list.words.length === 0) return null;
+                    const escaped = list.words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')).join('|');
+                    patternSource = list.options.wholeWord ? '\\b(' + escaped + ')\\b' : '(' + escaped + ')';
+                }
+
+                return {
+                    regex: new RegExp(patternSource, list.options.caseSensitive ? 'g' : 'gi'),
+                    styles: list.styles,
+                    priority: index,
+                    id: list.id,
+                    name: list.name,
+                    words: list.words,
+                    note: list.note,
+                    targetSelectors: list.targetSelectors || [],
+                    crossNode: list.options.crossNode || false,
+                    options: list.options
+                };
+            } catch (e) { return null; }
+        })
+        .filter(l => l !== null);
+}
+
+// --- Highlighting Logic ---
+
+function applyHighlights() {
+    if (!cachedState.isActive) return;
+    if (!chrome.runtime?.id) return;
+
+    if (cachedState.config.settings?.performanceMode) {
+        if (document.body.innerText.length > 50000) {
+            console.log('Mark My Words: Performance mode active. Skipping large page.');
+            return;
+        }
+    }
+
+    removeAllHighlights();
+
+    const textNodes = getTextNodes();
+    if (textNodes.length === 0) return;
+
+    let highlightCount = 0;
+    let ruleUsage = {};
+    activeRangesMeta = [];
+
+    const standardLists = cachedState.compiledLists;
+    const rangesByList = new Map();
+
+    // Utility to add range safely
+    const addRange = (node, startOffset, endOffset, list) => {
+        try {
+            const range = new Range();
+            range.setStart(node, startOffset);
+            range.setEnd(node, endOffset);
+
+            if (!rangesByList.has(list.id)) rangesByList.set(list.id, []);
+            rangesByList.get(list.id).push(range);
+
+            activeRangesMeta.push({ range: range, ruleName: list.name, note: list.note, id: list.id });
+            highlightCount++;
+            ruleUsage[list.name] = (ruleUsage[list.name] || 0) + 1;
+        } catch (e) { /* ignore range errors */ }
+    };
+
+    // Phase 1: Cross-Node Matching
+    const crossNodeLists = standardLists.filter(l => l.crossNode);
+    if (crossNodeLists.length > 0) {
+        let fullText = "";
+        let nodeMap = [];
+        textNodes.forEach(node => {
+            const start = fullText.length;
+            fullText += node.nodeValue;
+            nodeMap.push({ node: node, start: start, end: fullText.length });
+        });
+
+        const fullTextForMatching = fullText.replace(/\u00A0/g, ' ');
+
+        crossNodeLists.forEach(list => {
+            for (const match of fullTextForMatching.matchAll(list.regex)) {
+                if (match[0].length === 0) continue;
+                const matchStart = match.index;
+                const matchEnd = match.index + match[0].length;
+
+                const intersectingNodes = nodeMap.filter(nm => nm.end > matchStart && nm.start < matchEnd);
+                intersectingNodes.forEach(nm => {
+                    if (list.targetSelectors.length > 0) {
+                        let allowed = false;
+                        for (let sel of list.targetSelectors) {
+                            if (nm.node.parentNode.closest(sel)) { allowed = true; break; }
+                        }
+                        if (!allowed) return;
+                    }
+
+                    const localStart = Math.max(0, matchStart - nm.start);
+                    const localEnd = Math.min(nm.node.nodeValue.length, matchEnd - nm.start);
+                    addRange(nm.node, localStart, localEnd, list);
+                });
+            }
+        });
+    }
+
+    // Phase 2: Standard Single-Node Matching
+    const singleNodeLists = standardLists.filter(l => !l.crossNode);
+    textNodes.forEach(node => {
+        const text = node.nodeValue;
+        const textForMatching = text.replace(/\u00A0/g, ' ');
+
+        singleNodeLists.forEach(list => {
+            if (list.targetSelectors.length > 0) {
+                let allowed = false;
+                for (let sel of list.targetSelectors) {
+                    if (node.parentNode.closest(sel)) { allowed = true; break; }
+                }
+                if (!allowed) return;
+            }
+
+            for (const match of textForMatching.matchAll(list.regex)) {
+                if (match[0].length === 0) continue;
+                addRange(node, match.index, match.index + match[0].length, list);
+            }
+        });
+    });
+
+    // Apply via CSS Custom Highlight API
+    if ('highlights' in CSS) {
+        injectHighlightStyles();
+        rangesByList.forEach((ranges, listId) => {
+            if (ranges.length === 0) return;
+            const validRanges = ranges.filter(r => {
+                try {
+                    // Verify the range is still valid (nodes still in DOM)
+                    r.getBoundingClientRect();
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            });
+            if (validRanges.length === 0) return;
+            const highlight = new Highlight(...validRanges);
+            
+            // Higher priority = higher number. Top rules (index 0) get highest priority
+            const listIndex = cachedState.compiledLists.findIndex(l => l.id === listId);
+            if (listIndex !== -1) {
+                highlight.priority = cachedState.compiledLists.length - listIndex;
+            }
+            
+            CSS.highlights.set('mmw-' + listId, highlight);
+        });
+    }
+
+    // Calculate deltas for analytics
+    let deltaCount = Math.max(0, highlightCount - lastHighlightCount);
+    let deltaRuleUsage = {};
+    
+    Object.entries(ruleUsage).forEach(([rule, count]) => {
+        let lastCount = lastRuleUsage[rule] || 0;
+        let delta = Math.max(0, count - lastCount);
+        if (delta > 0) {
+            deltaRuleUsage[rule] = delta;
+        }
+    });
+    
+    lastHighlightCount = highlightCount;
+    lastRuleUsage = ruleUsage;
+
+    updateBadge(highlightCount);
+    if (deltaCount > 0) {
+        updateAnalytics(deltaCount, deltaRuleUsage);
+    }
+}
+
+function injectHighlightStyles() {
+    let styleTag = document.getElementById('mmw-dynamic-styles');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'mmw-dynamic-styles';
+        document.head.appendChild(styleTag);
+    }
+
+    let css = '';
+    cachedState.compiledLists.forEach(list => {
+        var strike = (list.styles && list.styles.strikeThrough) ? 'line-through' : 'none';
+        var glow = (list.styles && list.styles.glow) ? `text-shadow: 0 0 8px ${list.styles.backgroundColor}, 0 0 12px ${list.styles.backgroundColor} !important;` : '';
+        css += '::highlight(mmw-' + list.id + ') {\n';
+        css += '  background-color: ' + list.styles.backgroundColor + ' !important;\n';
+        css += '  color: ' + list.styles.color + ' !important;\n';
+        css += '  text-decoration: ' + strike + ' !important;\n';
+        if (glow) css += '  ' + glow + '\n';
+        css += '}\n';
+    });
+    styleTag.textContent = css;
+}
+
+const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'IFRAME', 'CODE', 'PRE', 'SELECT', 'OPTION', 'CANVAS', 'SVG', 'AUDIO', 'VIDEO']);
+
+function getTextNodes() {
+    const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: (node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (SKIP_TAGS.has(node.tagName)) return NodeFilter.FILTER_REJECT;
+                    if (node.isContentEditable) return NodeFilter.FILTER_REJECT;
+
+
+                    if (node.checkVisibility && !node.checkVisibility({checkOpacity: true, checkVisibilityCSS: true})) {
+                        if (node.tagName !== 'A' && node.tagName !== 'LABEL') {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                }
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        }
+    );
+
+    const nodes = [];
+    let node;
+    while ((node = walker.nextNode())) nodes.push(node);
+    return nodes;
+}
+
+function removeAllHighlights() {
+    if ('highlights' in CSS) {
+        CSS.highlights.clear();
+    }
+    activeRangesMeta = [];
+
+}
+
+function updateBadge(count) {
+    if (!chrome.runtime?.id) return;
+    try {
+        chrome.runtime.sendMessage({ action: "update_badge", count: count }, () => {
+            if (chrome.runtime.lastError) { /* ignore */ }
+        });
+    } catch (e) { /* ignore */ }
+}
+
+function updateAnalytics(count, ruleUsage) {
+    if (count === 0) return;
+    chrome.storage.local.get(['highlight_analytics'], (result) => {
+        let analytics = result.highlight_analytics || { totalHighlights: 0, ruleUsage: {} };
+        analytics.totalHighlights += count;
+
+        Object.entries(ruleUsage).forEach(([rule, ruleCount]) => {
+            analytics.ruleUsage[rule] = (analytics.ruleUsage[rule] || 0) + ruleCount;
+        });
+
+        chrome.storage.local.set({ highlight_analytics: analytics });
+    });
+}
+
+
+
+function escapeHtml(text) {
+    if (!text) return text;
+    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
